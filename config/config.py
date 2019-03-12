@@ -41,6 +41,7 @@ class Configuration(object, metaclass=Singleton):
             # [utility]
             self.PRIVATE_UTILITY = config.get('utility', 'private_utility')
             self.SUBMODULAR_P_UTILITY = config.getboolean('utility', 'submodular_p_utility')
+            self.SYSTEM_UTILITY = config.get('utility', 'system_utility')
 
             # [logging]
             self.LOG_LEVEL = config.get('logging', 'log_level')

@@ -838,32 +838,31 @@ class SdoOrchestrator:
 
         # apply node-based scaling
         scaling_factor = int(hashlib.sha256((self.sdo_name + node + service).encode()).hexdigest(), 16) / 2 ** 256
-        if self.sdo_name == 'sdo1' or self.sdo_name == 'sdo4' or self.sdo_name == 'sdo7' or self.sdo_name == 'sdo15' or self.sdo_name == 'sdo16':
-            # put a low node scaling for already used node (between 0.0 and 3)
-            if len(taken_services) > 1 and node in [bid_bundle[s]['node'] for s in taken_services[:-1]]:
-                scaling_factor = (0.1 - 0) * scaling_factor
-        #if True:
-            # put an high node scaling for the last used node (between 0.7 and 1)
-            #if len(taken_services) > 1 and bid_bundle[taken_services[-2]]['node'] == node:
-            #    scaling_factor = (1 - 0.7) * scaling_factor + 0.7
-        #elif False:
-            # put the maximum for the already used ones
-            #if len(taken_services) > 1 and node in [bid_bundle[s]['node'] for s in taken_services[:-1]]:
-            #   scaling_factor = 1
-        else: # self.sdo_name == 'sdo2' or self.sdo_name == 'sdo6' or self.sdo_name == 'sdo10' or self.sdo_name == 'sdo14' or self.sdo_name == 'sdo18':
-            # put a low node scaling for not used nodes (between 0.00 and 0.5)
+
+        if configuration.SYSTEM_UTILITY == 'NONE':
+            if self.sdo_name == 'sdo1' or self.sdo_name == 'sdo4' or self.sdo_name == 'sdo7' or self.sdo_name == 'sdo15' or self.sdo_name == 'sdo16':
+                # put a low node scaling for already used node (between 0.0 and 0.1)
+                if len(taken_services) > 1 and node in [bid_bundle[s]['node'] for s in taken_services[:-1]]:
+                    scaling_factor = (0.1 - 0) * scaling_factor
+            else:
+                # put a low node scaling for not used nodes (between 0.0 and 0.1)
+                if len(taken_services) > 1 and node not in [bid_bundle[s]['node'] for s in taken_services[:-1]]:
+                    # return 0
+                    scaling_factor = (0.1 - 0) * scaling_factor
+            # pass
+        elif configuration.SYSTEM_UTILITY == 'FEW-NODES':
+            # put a low node scaling for not used node (between 0.0 and 0.1)
             if len(taken_services) > 1 and node not in [bid_bundle[s]['node'] for s in taken_services[:-1]]:
-                # return 0
                 scaling_factor = (0.1 - 0) * scaling_factor
-        #elif False:
-            # put a low node scaling for already used node (between 0.0 and 3)
-            # if len(taken_services) > 1 and node in [bid_bundle[s]['node'] for s in taken_services[:-1]]:
+            # put an high node scaling for the last used node (between 0.7 and 1)
+            if len(taken_services) > 1 and bid_bundle[taken_services[-2]]['node'] == node:
+                scaling_factor = (1 - 0.7) * scaling_factor + 0.7
+        elif configuration.SYSTEM_UTILITY == 'MANY-NODES':
+            # put a low node scaling for already used node (between 0.0 and 0.3)
+            if len(taken_services) > 1 and node in [bid_bundle[s]['node'] for s in taken_services[:-1]]:
                 # return 0
-            #    scaling_factor = (0.3 - 0) * scaling_factor
-        #elif False:
-            # do not reuse nodes
-            #if len(taken_services) > 1 and node in [bid_bundle[s]['node'] for s in taken_services[:-1]]:
-            #
+                scaling_factor = (0.3 - 0) * scaling_factor
+
         utility = utility*scaling_factor
         logging.debug("node-based scaled utility: " + str(utility))
 
@@ -872,6 +871,7 @@ class SdoOrchestrator:
         utility = utility*scaling_factor
         logging.debug("sdo-based scaled utility: " + str(utility))
 
+        # this is the sigmoid (for normalization) - use '_gen_log_func' instead?
         utility = 1.043935 + (0.0002072756 - 1.043935)/(1 + (utility/0.1348168)**1.411127)
 
         # put the utility value between inf and sup
