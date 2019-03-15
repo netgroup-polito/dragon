@@ -85,3 +85,34 @@ Please modify [config/default-config.ini]() as desired before to run it, so to s
     
 The number of agent specified in the configuration file (each with a random number of services) will be run and the script will wait for convergence.
 At the end of the execution, the log file of each agent will be available in the main folder, while details on the resulting assignments will be stored on the (generated) [results]() folder.
+
+###### Tests on remote nodes
+ 
+An alternative scripts allows you to perform tests while running agents on remote hosts. 
+Since this requires to setup ssh connections with the remote hosts, please install ssh server on each of them:
+ 
+    # apt install openssh-server
+ 
+then please setup your ssh public key to be accepted on every target host.
+
+You may need to increase the limit of ssh connection accepted on each host, by modifying the 'MaxStartups' parameter in the sshd configuration file:
+
+    # nano /etc/ssh/sshd_config
+    
+Then, assuming you want to allow up to 50 connections, change the 'MaxStartups' line as follows:
+
+    MaxStartups 50:30:100
+    
+Save the change and restart the ssh daemon:
+
+    # service sshd restart
+
+Make sure rabbitmq is running on every host thorugh federated setup (see [https://www.rabbitmq.com/federation.html]()).
+
+The [tests/test_script_ssh.py]() script allows you to specify the list of remote hosts, the username to be used to setup the ssh connection and the remote path where dragon is located. Please modify these values in the first lines of the script according to your setup.
+
+Analogously to the local test script, you can run the remote test using: 
+   
+    $ python3 -m tests.test_script_ssh
+    
+The script will automatically copy the local configuration to the remote hosts, and dragon agents will be spanned on them (agents that are neighbors in the topology file will be likely deployed on the same - or on a near - host). All output and log files will be fetched and results displayed locally.

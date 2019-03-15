@@ -1,11 +1,15 @@
 from __future__ import print_function
-import sys
 
+import contextlib
+import multiprocessing
+import sys
+import io
 import hashlib
 import json
 import pprint
 import shutil
 import threading
+import time
 
 import paramiko
 
@@ -21,45 +25,52 @@ from config.config import Configuration
 from resource_assignment.network_plotter import NetworkPlotter
 from resource_assignment.resource_assignment_problem import ResourceAllocationProblem
 
-from scripts import purge_rabbit
 from tests.utils.graph import Graph
 
 
-def remote_sdo_worker(_host, _sdo_name, _services, _log_level, _conf_file):
+# -------- Remote Test Configuration -------- #
+
+# list of the remote hosts network addresses
+remote_hosts = ["127.0.0.1"]
+# remote_hosts = ["10.0.0.1", "10.0.0.2", "10.0.0.3"]
+# remote username for ssh
+remote_username = "gabriele"
+# location of the dragon main folder on the remote hosts (both relative and absolute paths are ok)
+remote_dragon_path = "dragon"
+
+# ------------------------------------------- #
+
+
+def remote_sdo_worker(_host_index, _sdo_name, _services, _log_level, _conf_file):
 
     ssh_clients[_sdo_name] = paramiko.SSHClient()
 
     _ssh = ssh_clients[_sdo_name]
     _ssh.load_system_host_keys()
     _ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    _ssh.connect(remote_hosts[_host], username="gabriele")
+
+    _ssh.connect(remote_hosts[_host_index], username="gabriele")
+    time.sleep(3)
 
     _stdin, _stdout, _stderr = _ssh.exec_command("cd dragon" + "; "
-                                                 "python3 main.py {} {} -l {} -d {} -o".format(_sdo_name,
-                                                                                               " ".join(_services),
-                                                                                               _log_level,
-                                                                                               _conf_file),
+                                                 "python3 main.pgit y {} {} -l {} -d {} -o".format(_sdo_name,
+                                                                                                   " ".join(_services),
+                                                                                                   _log_level,
+                                                                                                   _conf_file),
                                                  get_pty=True)
     _exit_status = stdout.channel.recv_exit_status()
-    _ssh.close()
 
-    for line in _stdout:
+    lines = _stdout.readlines()
+    for line in lines:
         print(line)
-    for line in _stderr:
+    lines = _stderr.readlines()
+    for line in lines:
         print(line, file=sys.stderr)
 
+    _ssh.close()
 
-remote_hosts = {
-    "local": "127.0.0.1"
-    # "node0": "10.0.0.1"
-    # , "node1": "10.0.0.2"
-}
-remote_username = "gabriele"
-remote_dragon_path = "dragon"
 
-# init ssh clients
 ssh_clients = dict()
-
 p_list = list()
 
 # [ Configuration ]
@@ -88,26 +99,25 @@ ssh = paramiko.SSHClient()
 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 ssh.load_system_host_keys()
 
-for host, address in remote_hosts.items():
+for address in remote_hosts:
     ssh.connect(address, username=remote_username)
     # purge rabbitmq queues
     stdin, stdout, stderr = ssh.exec_command('cd {}'.format(remote_dragon_path) + '; ' +
-                                             'python3 -m scripts.purge_rabbit', get_pty=True)
-
+                                             'python3 -m scripts.purge_rabbit')
     exit_status = stdout.channel.recv_exit_status()
-    print("{} {} {}".format(stdin, stdout, stderr, exit_status))
+    print("{} {} {} {}".format(stdin, stdout.readlines(), stderr.readlines(), exit_status))
 
     # copy configuration and instance
     scp = SCPClient(ssh.get_transport())
-    scp.put(["config/" + CONF_FILE, "config/" + configuration.RAP_INSTANCE],
+    scp.put(["config/" + CONF_FILE, configuration.RAP_INSTANCE],
             remote_dragon_path + "/config/")
     scp.close()
 
     # clean result directories
     stdin, stdout, stderr = ssh.exec_command('cd {}'.format(remote_dragon_path) + '; ' +
-                                             'rm -r {}'.format(configuration.RESULTS_FOLDER), get_pty=True)
+                                             'rm -r {}'.format(configuration.RESULTS_FOLDER))
     exit_status = stdout.channel.recv_exit_status()
-    print("{} {} {}".format(stdin, stdout, stderr, exit_status))
+    print("{} {} {} {}".format(stdin, stdout.readlines(), stderr.readlines(), exit_status))
     ssh.close()
 
 # clean result directory
@@ -133,10 +143,13 @@ print("Statistical total demand percentage: " + str(round(average_resource_deman
 print("- -------------------- - ")
 
 # distribute sdos among physical nodes
-graph = Graph(json.loads(configuration.TOPOLOGY_FILE), len(rap.sdos))
+with open(configuration.TOPOLOGY_FILE) as topology_file:
+    graph = Graph(json.load(topology_file), len(rap.sdos))
 sdo_distribution = graph.compute_clusters(min(len(rap.sdos), len(remote_hosts)))
+print("sdo distribution: {}".format(sdo_distribution))
 
 print("- Run Orchestration - ")
+
 for i in range(configuration.SDO_NUMBER):
     sdo_name = "sdo" + str(i)
     service_bundle = [s for s in rap.services
@@ -147,13 +160,14 @@ for i in range(configuration.SDO_NUMBER):
 
     # run sdo instance on a physical node
     host = "node" + str(sdo_distribution[sdo_name])
-    print("running instance " + sdo_name + " on host " + host)
+    print("running instance " + sdo_name + " on host " + str(sdo_distribution[sdo_name]))
 
-    t = threading.Thread(target=remote_sdo_worker, args=(host,
-                                                         sdo_name,
-                                                         service_bundle,
-                                                         configuration.LOG_LEVEL,
-                                                         CONF_FILE))
+    #t = threading.Thread(target=remote_sdo_worker, args=(host,
+    t = multiprocessing.Process(target=remote_sdo_worker, args=(sdo_distribution[sdo_name],
+                                                                sdo_name,
+                                                                service_bundle,
+                                                                configuration.LOG_LEVEL,
+                                                                CONF_FILE))
     t.start()
 
     p_list.append(t)
@@ -163,18 +177,20 @@ for i, t in enumerate(p_list):
     try:
         t.join(timeout=50)
     except TimeoutExpired:
-        ssh_clients['sdo' + str(i)].get_transport().close()
-        ssh_clients['sdo' + str(i)].close()
-        killed.append('sdo' + str(i))
+        #ssh_clients['sdo' + str(i)].get_transport().close()
+        #ssh_clients['sdo' + str(i)].close()
+        t.kill()
+        #killed.append('sdo' + str(i))
 
 print(" - Collect Results - ")
 
 # fetch remote result files
-for host, address in remote_hosts:
+for address in remote_hosts:
     ssh.connect(address, username=remote_username)
 
-    stdin, stdout, stderr = ssh.exec_command("ls " + remote_dragon_path + "/*.log")
-    log_files = stdout.read().split()
+    stdin, stdout, stderr = ssh.exec_command('cd {}'.format(remote_dragon_path) + '; ' +
+                                             "ls *.log")
+    log_files = list(map(bytes.decode, stdout.read().splitlines()))
 
     scp = SCPClient(ssh.get_transport())
     # results
@@ -258,5 +274,14 @@ while len(message_rates) > 0:
 # print message rates
 print("Message rates: \n" + pprint.pformat(global_rates))
 
+'''
 # purge rabbitmq queues
-purge_rabbit.purge_queues(sdos)
+for address in remote_hosts:
+    ssh.connect(address, username=remote_username)
+    # purge rabbitmq queues
+    stdin, stdout, stderr = ssh.exec_command('cd {}'.format(remote_dragon_path) + '; ' +
+                                             'python3 -m scripts.purge_rabbit')
+    exit_status = stdout.channel.recv_exit_status()
+    print("{} {} {} {}".format(stdin, stdout.readlines(), stderr.readlines(), exit_status))
+    ssh.close()
+'''
