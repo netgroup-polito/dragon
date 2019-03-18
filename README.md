@@ -57,7 +57,7 @@ This project requires python 3.6 and has been tested on Linux debian (testing) w
 Some additional python packages are required:
 
     $ sudo apt install python3-pip
-    $ sudo pip3 install pika==0.12.0 colorlog==3.1.4
+    $ sudo pip3 install -r requirements.txt
     
 Inter agent communication is implemented over the RabbitMQ Broker. To install it use the following command: 
 
