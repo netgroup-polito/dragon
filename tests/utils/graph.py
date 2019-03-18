@@ -27,17 +27,8 @@ class Graph:
                                    for node1 in self.topology.keys()
                                   for node2 in self.topology[node1]])
 
-        configuration = Configuration()
-        self.neighborhoods = dict()
-        for node in self.topology:
-            neighbors = NeighborhoodDetector(sdos=list(self.topology.keys()),
-                                             base_sdo=node,
-                                             load_neighborhood=configuration.LOAD_TOPOLOGY,
-                                             neighbor_probability=configuration.NEIGHBOR_PROBABILITY,
-                                             topology_file=configuration.TOPOLOGY_FILE,
-                                             stable_connections=configuration.STABLE_CONNECTIONS).get_neighborhood()
-            # self.topology.add_edges_from([(sdo, sdo2) for sdo2 in neighbors])
-            self.neighborhoods[node] = neighbors
+        if len(self.topology.keys()) == 1:
+            self.graph.add_nodes_from(self.topology.keys())
 
     def compute_clusters(self, n_clusters):
 
@@ -72,6 +63,6 @@ class Graph:
 
     def print_topology(self):
         print("-------- Topology ---------")
-        for node, neighborhood in self.neighborhoods.items():
+        for node, neighborhood in self.topology.items():
             print(node + " -> " + str(neighborhood))
         print("---------------------------")

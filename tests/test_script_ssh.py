@@ -1,14 +1,12 @@
 from __future__ import print_function
 
-import contextlib
 import multiprocessing
 import sys
-import io
 import hashlib
 import json
 import pprint
 import shutil
-import threading
+# import threading
 import time
 
 import paramiko
@@ -37,6 +35,8 @@ remote_hosts = ["pc336.emulab.net"]
 remote_username = "gabriele"
 # location of the dragon main folder on the remote hosts (both relative and absolute paths are ok)
 remote_dragon_path = "dragon"
+# local configuration file (will be copied on remote hosts)
+CONF_FILE = 'config/config.ini'
 
 # ------------------------------------------- #
 
@@ -53,10 +53,10 @@ def remote_sdo_worker(_host_index, _sdo_name, _services, _log_level, _conf_file)
     time.sleep(3)
 
     _stdin, _stdout, _stderr = _ssh.exec_command("cd dragon" + "; "
-                                                 "python3 main.pgit y {} {} -l {} -d {} -o".format(_sdo_name,
-                                                                                                   " ".join(_services),
-                                                                                                   _log_level,
-                                                                                                   _conf_file),
+                                                 "python3 main.py {} {} -l {} -d {} -o".format(_sdo_name,
+                                                                                               " ".join(_services),
+                                                                                               _log_level,
+                                                                                               _conf_file),
                                                  get_pty=True)
     _exit_status = stdout.channel.recv_exit_status()
 
@@ -74,7 +74,6 @@ ssh_clients = dict()
 p_list = list()
 
 # [ Configuration ]
-CONF_FILE = 'config/default-config.ini'
 configuration = Configuration(CONF_FILE)
 print("SDO_NUMBER:           " + str(configuration.SDO_NUMBER))
 print("NEIGHBOR_PROBABILITY: " + str(configuration.NEIGHBOR_PROBABILITY))
@@ -107,9 +106,9 @@ for address in remote_hosts:
     exit_status = stdout.channel.recv_exit_status()
     print("{} {} {} {}".format(stdin, stdout.readlines(), stderr.readlines(), exit_status))
 
-    # copy configuration and instance
+    # copy configuration, instance and topology
     scp = SCPClient(ssh.get_transport())
-    scp.put(["config/" + CONF_FILE, configuration.RAP_INSTANCE],
+    scp.put([CONF_FILE, configuration.RAP_INSTANCE, configuration.TOPOLOGY_FILE],
             remote_dragon_path + "/config/")
     scp.close()
 
