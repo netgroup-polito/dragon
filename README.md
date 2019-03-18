@@ -59,16 +59,22 @@ Some additional python packages are required:
     $ sudo apt install python3-pip
     $ sudo pip3 install -r requirements.txt
     
+Some tests require the metis library, please install it from source:
+
+    $ git clone https://github.com/networkx/networkx-metis/commit/8a6b6832958caf6b995a9f2c027f020ff5bdadbf
+    $ cd networkx-metis
+    # python3 setup.py install
+    
 Inter agent communication is implemented over the RabbitMQ Broker. To install it use the following command: 
 
-    $ sudo apt install rabbitmq-server
+    # apt install rabbitmq-server
     
 
 ### Run
 
 Make sure rabbitmq is running:
 
-    $ sudo service rabbitmq-server start
+    # service rabbitmq-server start
 
 The [main.py]() script runs a single instance of the DRAGON agent. To run it, use the following command from the project root directory:
 
