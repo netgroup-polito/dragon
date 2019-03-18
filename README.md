@@ -40,9 +40,11 @@ The repository tree contains:
 
 ### Fetch
 
-Download the source code by cloning the repository:
+Download the source code by cloning the repository, as well as any submodule:
 
     $ git clone https://github.com/netgroup-polito/dragon
+    $ cd dragon
+    $ git submodule update --init
 
 ### Configuration
 
