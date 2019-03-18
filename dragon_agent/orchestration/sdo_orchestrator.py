@@ -16,7 +16,7 @@ from resource_assignment.resource_assignment_problem import ResourceAllocationPr
 from dragon_agent.orchestration.exceptions import NoFunctionsLeft, SchedulingTimeout
 
 
-configuration = Configuration()
+configuration = None
 
 
 class SdoOrchestrator:
@@ -38,7 +38,9 @@ class SdoOrchestrator:
         :type resource_allocation_problem: ResourceAllocationProblem
         :type service_bundle: list
         """
-        super().__init__()
+
+        global configuration
+        configuration = Configuration()
 
         self.rap = resource_allocation_problem
         self.service_bundle = [str(i)+"_"+s for i, s in enumerate(service_bundle)]

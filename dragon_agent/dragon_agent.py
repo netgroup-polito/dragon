@@ -15,12 +15,15 @@ from dragon_agent.utils.messaging import Messaging
 from dragon_agent.utils.neighborhood import NeighborhoodDetector
 
 
-configuration = Configuration()
+configuration = None
 
 
 class SDONode:
 
     def __init__(self, sdo_name, rap, service_bundle):
+
+        global configuration
+        configuration = Configuration()
 
         # SDO node
         self.sdo_name = sdo_name

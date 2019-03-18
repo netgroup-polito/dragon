@@ -22,7 +22,6 @@ from subprocess import TimeoutExpired
 from scp import SCPClient
 
 from config.config import Configuration
-from resource_assignment.network_plotter import NetworkPlotter
 from resource_assignment.resource_assignment_problem import ResourceAllocationProblem
 
 from tests.utils.graph import Graph
@@ -31,8 +30,9 @@ from tests.utils.graph import Graph
 # -------- Remote Test Configuration -------- #
 
 # list of the remote hosts network addresses
-remote_hosts = ["127.0.0.1"]
+# remote_hosts = ["127.0.0.1"]
 # remote_hosts = ["10.0.0.1", "10.0.0.2", "10.0.0.3"]
+remote_hosts = ["pc336.emulab.net"]
 # remote username for ssh
 remote_username = "gabriele"
 # location of the dragon main folder on the remote hosts (both relative and absolute paths are ok)
@@ -74,7 +74,7 @@ ssh_clients = dict()
 p_list = list()
 
 # [ Configuration ]
-CONF_FILE = 'default-config.ini'
+CONF_FILE = 'config/default-config.ini'
 configuration = Configuration(CONF_FILE)
 print("SDO_NUMBER:           " + str(configuration.SDO_NUMBER))
 print("NEIGHBOR_PROBABILITY: " + str(configuration.NEIGHBOR_PROBABILITY))
@@ -123,9 +123,10 @@ for address in remote_hosts:
 # clean result directory
 shutil.rmtree(configuration.RESULTS_FOLDER, ignore_errors=True)
 
-# plot the topology
-# NetworkPlotter(rap.sdos).graphical_plot()
-NetworkPlotter(rap.sdos).print_topology()
+# load the 'sdo topology'
+with open(configuration.TOPOLOGY_FILE) as topology_file:
+    graph = Graph(json.load(topology_file), len(rap.sdos))
+graph.print_topology()
 
 # print total resources
 total_resources = rap.get_total_resources_amount()
@@ -143,8 +144,6 @@ print("Statistical total demand percentage: " + str(round(average_resource_deman
 print("- -------------------- - ")
 
 # distribute sdos among physical nodes
-with open(configuration.TOPOLOGY_FILE) as topology_file:
-    graph = Graph(json.load(topology_file), len(rap.sdos))
 sdo_distribution = graph.compute_clusters(min(len(rap.sdos), len(remote_hosts)))
 print("sdo distribution: {}".format(sdo_distribution))
 

@@ -4,8 +4,14 @@ import community
 import networkx as nx
 import nxmetis
 
+from config.config import Configuration
+from dragon_agent.utils.neighborhood import NeighborhoodDetector
+
 
 class Graph:
+    """
+    Here 'node' is a node of the graph, i.e., an sdo.
+    """
 
     def __init__(self, topology, n):
 
@@ -20,6 +26,18 @@ class Graph:
         self.graph.add_edges_from([(node1, node2)
                                    for node1 in self.topology.keys()
                                   for node2 in self.topology[node1]])
+
+        configuration = Configuration()
+        self.neighborhoods = dict()
+        for node in self.topology:
+            neighbors = NeighborhoodDetector(sdos=list(self.topology.keys()),
+                                             base_sdo=node,
+                                             load_neighborhood=configuration.LOAD_TOPOLOGY,
+                                             neighbor_probability=configuration.NEIGHBOR_PROBABILITY,
+                                             topology_file=configuration.TOPOLOGY_FILE,
+                                             stable_connections=configuration.STABLE_CONNECTIONS).get_neighborhood()
+            # self.topology.add_edges_from([(sdo, sdo2) for sdo2 in neighbors])
+            self.neighborhoods[node] = neighbors
 
     def compute_clusters(self, n_clusters):
 
@@ -51,3 +69,9 @@ class Graph:
                           for node in self.graph.nodes()}
         '''
         return clustering
+
+    def print_topology(self):
+        print("-------- Topology ---------")
+        for node, neighborhood in self.neighborhoods.items():
+            print(node + " -> " + str(neighborhood))
+        print("---------------------------")

@@ -11,15 +11,15 @@ from collections import OrderedDict
 from subprocess import TimeoutExpired
 
 from config.config import Configuration
-from resource_assignment.network_plotter import NetworkPlotter
 from resource_assignment.resource_assignment_problem import ResourceAllocationProblem
 
 from scripts import purge_rabbit
+from tests.utils.graph import Graph
 
 p_list = list()
 
 # [ Configuration ]
-CONF_FILE = 'default-config.ini'
+CONF_FILE = 'config/config.ini'
 configuration = Configuration(CONF_FILE)
 print("SDO_NUMBER:           " + str(configuration.SDO_NUMBER))
 print("NEIGHBOR_PROBABILITY: " + str(configuration.NEIGHBOR_PROBABILITY))
@@ -78,9 +78,11 @@ purge_rabbit.purge_queues(sdos)
 # clean result directory
 shutil.rmtree(configuration.RESULTS_FOLDER, ignore_errors=True)
 
-# plot the topology
-# NetworkPlotter(rap.sdos).graphical_plot()
-NetworkPlotter(rap.sdos).print_topology()
+# load the 'sdo topology'
+with open(configuration.TOPOLOGY_FILE) as topology_file:
+    graph = Graph(json.load(topology_file), len(rap.sdos))
+graph.print_topology()
+
 
 # print total resources
 total_resources = rap.get_total_resources_amount()
