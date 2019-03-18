@@ -1,0 +1,3 @@
+[submodule "tests/utils/nxmetis"]
+	path = tests/utils/nxmetis
+	url = https://github.com/networkx/networkx-metis

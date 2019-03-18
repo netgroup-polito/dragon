@@ -2,10 +2,7 @@ from collections import OrderedDict
 
 import community
 import networkx as nx
-import nxmetis
-
-from config.config import Configuration
-from dragon_agent.utils.neighborhood import NeighborhoodDetector
+import tests.utils.nxmetis.nxmetis as nxmetis
 
 
 class Graph:
@@ -32,8 +29,7 @@ class Graph:
 
     def compute_clusters(self, n_clusters):
 
-        # if len(self.graph.nodes()) < 7:
-
+        clustering = None
         if n_clusters == 1:
             clustering = {node: 0 for node in self.graph.nodes()}
         else:
@@ -42,23 +38,26 @@ class Graph:
             if n_clusters > len(self.graph.nodes()):
                 raise Exception("Too many clusters required")
 
-            while True:
+            attempt = 0
+            while attempt < 10:
                 clustering = community.best_partition(self.graph, resolution=try_resolution)
                 if len(set(clustering.values())) == n_clusters:
                     break
                 elif len(set(clustering.values())) < n_clusters or try_resolution > 1.1:
                     try_resolution = 0.0
+                    attempt += 1
                 else:
                     try_resolution += 0.05
-        '''
-        else:
+                clustering = None
+        if clustering is None:
+            # emergency algorithm:
             options = nxmetis.MetisOptions()
             options.ptype = 1
             options.objtype = 1
             clusters = nxmetis.partition(self.graph, n_clusters, options=options)[1]
             clustering = {node: [i for i, cluster in enumerate(clusters) if node in cluster][0]
                           for node in self.graph.nodes()}
-        '''
+
         return clustering
 
     def print_topology(self):

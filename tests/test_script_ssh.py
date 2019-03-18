@@ -28,9 +28,9 @@ from tests.utils.graph import Graph
 # -------- Remote Test Configuration -------- #
 
 # list of the remote hosts network addresses
-# remote_hosts = ["127.0.0.1"]
+remote_hosts = ["127.0.0.1", "127.0.0.1"]
 # remote_hosts = ["10.0.0.1", "10.0.0.2", "10.0.0.3"]
-remote_hosts = ["pc336.emulab.net"]
+#remote_hosts = ["pc336.emulab.net"]
 # remote username for ssh
 remote_username = "gabriele"
 # location of the dragon main folder on the remote hosts (both relative and absolute paths are ok)
@@ -50,7 +50,7 @@ def remote_sdo_worker(_host_index, _sdo_name, _services, _log_level, _conf_file)
     _ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
     _ssh.connect(remote_hosts[_host_index], username="gabriele")
-    time.sleep(3)
+    # time.sleep(3)
 
     _stdin, _stdout, _stderr = _ssh.exec_command("cd dragon" + "; "
                                                  "python3 main.py {} {} -l {} -d {} -o".format(_sdo_name,
