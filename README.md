@@ -38,6 +38,11 @@ The repository tree contains:
 * [use\_cases\_simulations/]()  
     --simulation environment that runs two edge use case over DRAGON
 
+### Fetch
+
+Download the source code by cloning the repository:
+
+    $ git clone https://github.com/netgroup-polito/dragon
 
 ### Configuration
 
