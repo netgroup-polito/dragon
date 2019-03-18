@@ -91,7 +91,7 @@ Please modify [config/default-config.ini]() as desired before to run it, so to s
 The number of agent specified in the configuration file (each with a random number of services) will be run and the script will wait for convergence.
 At the end of the execution, the log file of each agent will be available in the main folder, while details on the resulting assignments will be stored on the (generated) [results]() folder.
 
-###### Tests on remote nodes
+##### Tests on remote nodes
  
 An alternative scripts allows you to perform tests while running agents on remote hosts. 
 Since this requires to setup ssh connections with the remote hosts, please install ssh server on each of them:
