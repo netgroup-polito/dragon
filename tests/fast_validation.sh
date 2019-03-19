@@ -2,7 +2,7 @@
 
 rm validation/*
 
-CONFIG_FILE=config/default-config.ini
+CONFIG_FILE=config/config.ini
 
 sdo_number=3
 neighbor_probability="FIXED"
@@ -74,7 +74,7 @@ while [ ${sdo_number} -le 20 ]; do
             killall python3
             # python3 -m scripts.message_monitor &
             # monitor_pid=$!
-            python3 test_script.py >> ${file_name}
+            python3 -m tests.test_script >> ${file_name}
             # kill -2 ${monitor_pid}
             # wait ${monitor_pid}
             killall python3
@@ -114,7 +114,7 @@ while [ ${sdo_number} -le 20 ]; do
             killall python3
             # python3 -m scripts.message_monitor &
             # monitor_pid=$!
-            python3 test_script_centralized.py >> ${file_name_c}
+            python3 -m tests.test_script_centralized >> ${file_name_c}
             # kill -2 ${monitor_pid}
             # wait ${monitor_pid}
             killall python3
