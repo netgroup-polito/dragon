@@ -121,15 +121,24 @@ class Messaging(object, metaclass=Singleton):
         """
         logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
         self._write_channel.queue_declare(queue=dst)
-        self._write_channel.queue_bind(exchange='sdo_exchange',
-                                       queue=dst)
+        self._write_channel.queue_bind(exchange='sdo_exchange', queue=dst)
         self._write_channel.basic_publish(exchange='sdo_exchange',
                                           routing_key=dst,
                                           body=json.dumps(message.to_dict()))
 
+    def create_bind_queue(self,name):
+        self._channel.queue_declare(queue=name)
+        self._channel.queue_bind(exchange='sdo_exchange', queue=name)
+
+    def write_create_bind_queue(self,name):
+        self._write_channel.queue_declare(queue=name)
+        self._write_channel.queue_bind(exchange='sdo_exchange', queue=name)
+
+    def create_exchange(self, exchange, exchange_type):
+        self._channel.exchange_declare(exchange, exchange_type)
+
     def start_consuming(self):
         """
-
         :return:
         """
         # logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
@@ -175,6 +184,23 @@ class Messaging(object, metaclass=Singleton):
         self._channel.basic_consume(
             self._message_callback, queue=topic, no_ack=True)
 
+    def register_handler_federation(self, topic, handler=None):
+        """
+
+        :param topic:
+        :param handler: must be a a callable that takes one parameter of type BiddingMessage
+        :return:
+        """
+        # logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
+        # self._channel.queue_declare(queue=topic)
+        self._channel.queue_declare(queue=topic)
+        self._channel.queue_bind(exchange='sdo_exchange', queue=topic)
+        if handler is None:
+            handler = self._default_message_handler
+        self._message_handler = handler
+        self._channel.basic_consume(
+            self._message_callback, queue=topic, no_ack=True)
+
     def _timeout_handler(self):
         """
         Stops message consuming
@@ -209,3 +235,4 @@ class Messaging(object, metaclass=Singleton):
         """
         print("Received bidding_message from '" +
               message.sender + "': \n" + str(message))
+

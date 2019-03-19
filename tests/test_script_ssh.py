@@ -28,8 +28,8 @@ from tests.utils.graph import Graph
 # -------- Remote Test Configuration -------- #
 
 # list of the remote hosts network addresses
-remote_hosts = ["127.0.0.1", "127.0.0.1"]
-# remote_hosts = ["10.0.0.1", "10.0.0.2", "10.0.0.3"]
+#remote_hosts = ["127.0.0.1", "127.0.0.1"]
+remote_hosts = ["10.0.0.188", "10.0.0.63"]
 #remote_hosts = ["pc336.emulab.net"]
 # remote username for ssh
 remote_username = "gabriele"

@@ -73,6 +73,10 @@ class SDONode:
         self._messaging.connect()
         self._messaging.set_stop_timeout(configuration.WEAK_AGREEMENT_TIMEOUT, permanent=True)
 
+        # create exchange for federation
+        exchange_name = 'sdo_exchange'
+        self._messaging.create_exchange(exchange=exchange_name, exchange_type='direct')
+
         # first bidding
         self.sdo_bidder.sdo_orchestrate()
         logging.info(pprint.pformat(self.sdo_bidder.bidding_data))
@@ -82,8 +86,12 @@ class SDONode:
 
         # start to receive messages
         logging.info("Subscribing to handle messages with topic '" + self.sdo_bidder.sdo_name + "' ...")
+
+        # create queue for agent linked to this host
+        #self._messaging.create_bind_queue(self.sdo_name)
+
         # self._messaging.register_handler(self.sdo_bidder.sdo_name, self.bid_message_handler)
-        self._messaging.register_handler(self.sdo_bidder.sdo_name, self.bid_message_enqueue)
+        self._messaging.register_handler_federation(self.sdo_bidder.sdo_name, self.bid_message_enqueue)
         # start to handle messages
         thread = Thread(target=self.consumer)
         thread.start()
@@ -124,6 +132,10 @@ class SDONode:
 
     def consumer(self):
         self._messaging.connect_write()
+
+        # create queue for agent linked to this host
+        #self._messaging.write_create_bind_queue(self.sdo_name)
+
         self.broadcast()
         while self.end_time == 0:
             messages = self.dequeue_next_messages()
