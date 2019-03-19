@@ -13,8 +13,7 @@ import sys
 from config.config import Configuration
 from config.logging_configuration import LoggingConfiguration
 from resource_assignment.resource_assignment_problem import ResourceAllocationProblem
-from dragon_agent.orchestration.exceptions import NoFunctionsLeft, SchedulingTimeout
-
+from dragon_agent.orchestration.exceptions import NoFunctionsLeft, SchedulingTimeout, UtilityNotSupported
 
 configuration = None
 
@@ -736,7 +735,7 @@ class SdoOrchestrator:
             else:
                 return self._greed_marginal_utility(bid_bundle, service, function, node, submodular=spu)
         else:
-            return 0
+            raise UtilityNotSupported("Utility '{}' Not supported".format(configuration.SYSTEM_UTILITY))
 
     def _pseudo_marginal_utility(self, bid_bundle, service, function, node, submodular=True):
         """
@@ -864,6 +863,8 @@ class SdoOrchestrator:
             if len(taken_services) > 1 and node in [bid_bundle[s]['node'] for s in taken_services[:-1]]:
                 # return 0
                 scaling_factor = (0.3 - 0) * scaling_factor
+        else:
+            raise UtilityNotSupported("Utility '{}' Not supported".format(configuration.SYSTEM_UTILITY))
 
         utility = utility*scaling_factor
         logging.debug("node-based scaled utility: " + str(utility))
