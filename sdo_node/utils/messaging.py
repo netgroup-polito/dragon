@@ -57,7 +57,11 @@ class Messaging(object, metaclass=Singleton):
         :param broker_host:
         :return:
         """
-        return pika.BlockingConnection(pika.ConnectionParameters(broker_host))
+        credentials = pika.PlainCredentials('user_sdo', 'user_sdo')
+        parameters = pika.ConnectionParameters(
+            'localhost', 5672, 'sdo_vhost', credentials)
+        return pika.BlockingConnection(parameters)
+        # return pika.BlockingConnection(pika.ConnectionParameters(broker_host))
 
     def set_stop_timeout(self, timeout, permanent=False):
         """
@@ -68,10 +72,12 @@ class Messaging(object, metaclass=Singleton):
         """
         logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
         if permanent:
-            self._permanent_timeout_id = self._connection.add_timeout(timeout, self.stop_consuming)
+            self._permanent_timeout_id = self._connection.add_timeout(
+                timeout, self.stop_consuming)
             self._permanent_timeout = timeout
         elif self._timeout_id is None:
-            self._timeout_id = self._connection.add_timeout(timeout, self.stop_consuming)
+            self._timeout_id = self._connection.add_timeout(
+                timeout, self.stop_consuming)
 
     def del_stop_timeout(self):
         """
@@ -104,7 +110,22 @@ class Messaging(object, metaclass=Singleton):
         # self._channel.queue_declare(queue=dst)
         # self._channel.basic_publish(exchange='', routing_key=dst, body=json.dumps(message.to_dict()))
         self._write_channel.queue_declare(queue=dst)
-        self._write_channel.basic_publish(exchange='', routing_key=dst, body=json.dumps(message.to_dict()))
+        self._write_channel.basic_publish(
+            exchange='', routing_key=dst, body=json.dumps(message.to_dict()))
+
+    def send_message_federate(self, dst, message):
+        """
+        :param str dst: name of the destination is used as queue
+        :param BiddingMessage message:
+        :return:
+        """
+        logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
+        self._write_channel.queue_declare(queue=dst)
+        self._write_channel.queue_bind(exchange='sdo_exchange',
+                                       queue=dst)
+        self._write_channel.basic_publish(exchange='sdo_exchange',
+                                          routing_key=dst,
+                                          body=json.dumps(message.to_dict()))
 
     def start_consuming(self):
         """
@@ -151,7 +172,8 @@ class Messaging(object, metaclass=Singleton):
         if handler is None:
             handler = self._default_message_handler
         self._message_handler = handler
-        self._channel.basic_consume(self._message_callback, queue=topic, no_ack=True)
+        self._channel.basic_consume(
+            self._message_callback, queue=topic, no_ack=True)
 
     def _timeout_handler(self):
         """
@@ -172,7 +194,8 @@ class Messaging(object, metaclass=Singleton):
         """
         logging.log(15, " [x] Received " + body.decode())
         self = Messaging()
-        self._permanent_timeout_id = self._refresh_timeout(self._permanent_timeout_id, self._permanent_timeout)
+        self._permanent_timeout_id = self._refresh_timeout(
+            self._permanent_timeout_id, self._permanent_timeout)
 
         message = BiddingMessage()
         message.parse_dict(json.loads(body.decode()))
@@ -184,4 +207,5 @@ class Messaging(object, metaclass=Singleton):
 
         :param BiddingMessage message:
         """
-        print("Received bidding_message from '" + message.sender + "': \n" + str(message))
+        print("Received bidding_message from '" +
+              message.sender + "': \n" + str(message))

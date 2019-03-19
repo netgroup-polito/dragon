@@ -356,4 +356,5 @@ class SDONode:
         :type message: BiddingMessage
         :return:
         """
-        self._messaging.send_message(dst_sdo, message)
+        #self._messaging.send_message(dst_sdo, message)
+        self._messaging.send_message_federate(dst_sdo, message)

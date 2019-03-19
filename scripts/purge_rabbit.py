@@ -4,13 +4,18 @@ from config.config import Configuration
 
 
 def purge_queues(queues):
-    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+    credentials = pika.PlainCredentials('user_sdo', 'user_sdo')
+    parameters = pika.ConnectionParameters('localhost', 5672, 'sdo_vhost', credentials)
+
+    connection = pika.BlockingConnection(parameters)
+
+    # connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
     channel = connection.channel()
 
     for sdo in queues:
         channel.queue_declare(queue=sdo)
         channel.queue_purge(sdo)
-        # channel.queue_delete(queue=sdo)
+        channel.queue_delete(queue=sdo)
     connection.close()
 
 
