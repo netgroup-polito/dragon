@@ -1,23 +1,12 @@
 from __future__ import print_function
 
-<<<<<<< HEAD
-import contextlib
 import multiprocessing
 import sys
-import io
-=======
-import multiprocessing
-import sys
->>>>>>> master
 import hashlib
 import json
 import pprint
 import shutil
-<<<<<<< HEAD
-import threading
-=======
 # import threading
->>>>>>> master
 import time
 
 import paramiko
@@ -31,10 +20,6 @@ from subprocess import TimeoutExpired
 from scp import SCPClient
 
 from config.config import Configuration
-<<<<<<< HEAD
-from resource_assignment.network_plotter import NetworkPlotter
-=======
->>>>>>> master
 from resource_assignment.resource_assignment_problem import ResourceAllocationProblem
 
 from tests.utils.graph import Graph
@@ -43,23 +28,15 @@ from tests.utils.graph import Graph
 # -------- Remote Test Configuration -------- #
 
 # list of the remote hosts network addresses
-<<<<<<< HEAD
-remote_hosts = ["10.0.0.188","10.0.0.63"]
-# remote_hosts = ["10.0.0.1", "10.0.0.2", "10.0.0.3"]
-=======
 remote_hosts = ["127.0.0.1", "127.0.0.1"]
 # remote_hosts = ["10.0.0.1", "10.0.0.2", "10.0.0.3"]
 #remote_hosts = ["pc336.emulab.net"]
->>>>>>> master
 # remote username for ssh
 remote_username = "gabriele"
 # location of the dragon main folder on the remote hosts (both relative and absolute paths are ok)
 remote_dragon_path = "dragon"
-<<<<<<< HEAD
-=======
 # local configuration file (will be copied on remote hosts)
 CONF_FILE = 'config/config.ini'
->>>>>>> master
 
 # ------------------------------------------- #
 
@@ -72,16 +49,6 @@ def remote_sdo_worker(_host_index, _sdo_name, _services, _log_level, _conf_file)
     _ssh.load_system_host_keys()
     _ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-<<<<<<< HEAD
-    _ssh.connect(remote_hosts[_host_index], username=remote_username)
-    time.sleep(3)
-
-    _stdin, _stdout, _stderr = _ssh.exec_command("cd dragon" + "; "
-                                                 "python3 main.py {} {} -l {} -d {} -o".format(_sdo_name,
-                                                                                                   " ".join(_services),
-                                                                                                   _log_level,
-                                                                                                   _conf_file),
-=======
     _ssh.connect(remote_hosts[_host_index], username="gabriele")
     # time.sleep(3)
 
@@ -90,7 +57,6 @@ def remote_sdo_worker(_host_index, _sdo_name, _services, _log_level, _conf_file)
                                                                                                " ".join(_services),
                                                                                                _log_level,
                                                                                                _conf_file),
->>>>>>> master
                                                  get_pty=True)
     _exit_status = stdout.channel.recv_exit_status()
 
@@ -108,10 +74,6 @@ ssh_clients = dict()
 p_list = list()
 
 # [ Configuration ]
-<<<<<<< HEAD
-CONF_FILE = 'config.ini'
-=======
->>>>>>> master
 configuration = Configuration(CONF_FILE)
 print("SDO_NUMBER:           " + str(configuration.SDO_NUMBER))
 print("NEIGHBOR_PROBABILITY: " + str(configuration.NEIGHBOR_PROBABILITY))
@@ -138,31 +100,18 @@ ssh.load_system_host_keys()
 
 for address in remote_hosts:
     ssh.connect(address, username=remote_username)
-<<<<<<< HEAD
-
-    # copy configuration and instance
-    scp = SCPClient(ssh.get_transport())
-    scp.put(["config/" + CONF_FILE, configuration.RAP_INSTANCE],
-            remote_dragon_path + "/config/")
-    scp.close()
-
-=======
->>>>>>> master
     # purge rabbitmq queues
     stdin, stdout, stderr = ssh.exec_command('cd {}'.format(remote_dragon_path) + '; ' +
                                              'python3 -m scripts.purge_rabbit')
     exit_status = stdout.channel.recv_exit_status()
     print("{} {} {} {}".format(stdin, stdout.readlines(), stderr.readlines(), exit_status))
 
-<<<<<<< HEAD
-=======
     # copy configuration, instance and topology
     scp = SCPClient(ssh.get_transport())
     scp.put([CONF_FILE, configuration.RAP_INSTANCE, configuration.TOPOLOGY_FILE],
             remote_dragon_path + "/config/")
     scp.close()
 
->>>>>>> master
     # clean result directories
     stdin, stdout, stderr = ssh.exec_command('cd {}'.format(remote_dragon_path) + '; ' +
                                              'rm -r {}'.format(configuration.RESULTS_FOLDER))
@@ -173,16 +122,10 @@ for address in remote_hosts:
 # clean result directory
 shutil.rmtree(configuration.RESULTS_FOLDER, ignore_errors=True)
 
-<<<<<<< HEAD
-# plot the topology
-# NetworkPlotter(rap.sdos).graphical_plot()
-NetworkPlotter(rap.sdos).print_topology()
-=======
 # load the 'sdo topology'
 with open(configuration.TOPOLOGY_FILE) as topology_file:
     graph = Graph(json.load(topology_file), len(rap.sdos))
 graph.print_topology()
->>>>>>> master
 
 # print total resources
 total_resources = rap.get_total_resources_amount()
@@ -200,11 +143,6 @@ print("Statistical total demand percentage: " + str(round(average_resource_deman
 print("- -------------------- - ")
 
 # distribute sdos among physical nodes
-<<<<<<< HEAD
-with open(configuration.TOPOLOGY_FILE) as topology_file:
-    graph = Graph(json.load(topology_file), len(rap.sdos))
-=======
->>>>>>> master
 sdo_distribution = graph.compute_clusters(min(len(rap.sdos), len(remote_hosts)))
 print("sdo distribution: {}".format(sdo_distribution))
 
@@ -222,11 +160,7 @@ for i in range(configuration.SDO_NUMBER):
     host = "node" + str(sdo_distribution[sdo_name])
     print("running instance " + sdo_name + " on host " + str(sdo_distribution[sdo_name]))
 
-<<<<<<< HEAD
-    # t = threading.Thread(target=remote_sdo_worker, args=(host,
-=======
     #t = threading.Thread(target=remote_sdo_worker, args=(host,
->>>>>>> master
     t = multiprocessing.Process(target=remote_sdo_worker, args=(sdo_distribution[sdo_name],
                                                                 sdo_name,
                                                                 service_bundle,
@@ -241,17 +175,10 @@ for i, t in enumerate(p_list):
     try:
         t.join(timeout=50)
     except TimeoutExpired:
-<<<<<<< HEAD
-        # ssh_clients['sdo' + str(i)].get_transport().close()
-        # ssh_clients['sdo' + str(i)].close()
-        t.kill()
-        # killed.append('sdo' + str(i))
-=======
         #ssh_clients['sdo' + str(i)].get_transport().close()
         #ssh_clients['sdo' + str(i)].close()
         t.kill()
         #killed.append('sdo' + str(i))
->>>>>>> master
 
 print(" - Collect Results - ")
 
