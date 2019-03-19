@@ -5,8 +5,8 @@ import os
 
 from config.config import Configuration
 from config.logging_configuration import LoggingConfiguration
-from resource_allocation.resoruce_allocation_problem import ResourceAllocationProblem
-from sdo_node.sdo_node import SDONode
+from resource_assignment.resource_assignment_problem import ResourceAllocationProblem
+from dragon_agent.dragon_agent import SDONode
 
 
 def parse_arguments():
@@ -24,13 +24,13 @@ def parse_arguments():
         'sdo_name',
         metavar='sdo-name',
         type=str,
-        help='Name of the sdo.',
+        help='Name of the agent.',
     )
     parser.add_argument(
         'service',
         type=str,
         nargs='+',
-        help='Name of the sdo.',
+        help='List of services.',
     )
     parser.add_argument(
         '-l',

@@ -5,8 +5,8 @@ import os
 
 from config.config import Configuration
 from config.logging_configuration import LoggingConfiguration
-from resource_allocation.resoruce_allocation_problem import ResourceAllocationProblem
-from sdo_node.centralized_node import CentralizedNode
+from resource_assignment.resource_assignment_problem import ResourceAllocationProblem
+from dragon_agent.centralized_node import CentralizedNode
 
 
 def parse_arguments():

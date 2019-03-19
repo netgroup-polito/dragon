@@ -1,4 +1,4 @@
-## A Distributed Resource AssiGnment and Orchestration algorithm with Guarantees
+## DRAGON v1.0 README
 
 Updated Jul 30, 2018
 
@@ -38,6 +38,13 @@ The repository tree contains:
 * [use\_cases\_simulations/]()  
     --simulation environment that runs two edge use case over DRAGON
 
+### Fetch
+
+Download the source code by cloning the repository, as well as any submodule:
+
+    $ git clone https://github.com/netgroup-polito/dragon
+    $ cd dragon
+    $ git submodule update --init
 
 ### Configuration
 
@@ -52,18 +59,23 @@ This project requires python 3.6 and has been tested on Linux debian (testing) w
 Some additional python packages are required:
 
     $ sudo apt install python3-pip
-    $ sudo pip3 install pika==0.12.0 colorlog==3.1.4
+    $ sudo pip3 install -r requirements.txt
+    
+Some tests require the metis library, please install it from source:	
+
+    $ cd [dragon]/tests/utils/nxmetis
+    # python3 setup.py install	
+
     
 Inter agent communication is implemented over the RabbitMQ Broker. To install it use the following command: 
 
-    $ sudo apt install rabbitmq-server
+    # apt install rabbitmq-server
     
-
 ### Run
 
 Make sure rabbitmq is running:
 
-    $ sudo service rabbitmq-server start
+    # service rabbitmq-server start
 
 The [main.py]() script runs a single instance of the DRAGON agent. To run it, use the following command from the project root directory:
 
@@ -85,3 +97,34 @@ Please modify [config/default-config.ini]() as desired before to run it, so to s
     
 The number of agent specified in the configuration file (each with a random number of services) will be run and the script will wait for convergence.
 At the end of the execution, the log file of each agent will be available in the main folder, while details on the resulting assignments will be stored on the (generated) [results]() folder.
+
+##### Tests on multiple remote hosts
+ 
+An alternative script allows you to perform tests while running agents on remote hosts. 
+Since this requires to setup ssh connections with the remote hosts, please install the ssh server on each of them:
+ 
+    # apt install openssh-server
+ 
+then please setup your ssh public key to be accepted on every target host.
+
+You may need to increase the limit of ssh connections accepted on each host, by modifying the 'MaxStartups' parameter in the sshd configuration file:
+
+    # nano /etc/ssh/sshd_config
+    
+Then, assuming you want to allow up to 50 connections, change the 'MaxStartups' line as follows:
+
+    MaxStartups 50:30:100
+    
+Close and save the file, then restart the ssh daemon:
+
+    # service sshd restart
+
+Make sure rabbitmq is running on every host thorugh federated setup (see [https://www.rabbitmq.com/federation.html]()).
+
+The [tests/test_script_ssh.py]() script can be setup specifying the list of remote hosts, the username to be used for the ssh connections and the remote path where dragon is located. Please modify these values in the first lines of the script according to your setup.
+
+Analogously to the local test script, you can run the remote test using: 
+   
+    $ python3 -m tests.test_script_ssh
+    
+The script will automatically copy the local configuration to the remote hosts, and dragon agents will be spanned on them (agents that are neighbors in the topology file will be likely deployed on the same - or on a near - host). All output and log files will be fetched and results displayed locally.

@@ -12,9 +12,6 @@ from urllib.error import HTTPError
 from config.config import Configuration
 
 
-configuration = Configuration()
-
-
 '''
 def get_message_number(queues):
     counter = 0
@@ -76,6 +73,8 @@ def signal_handler(signal, frame):
 
 
 if __name__ == "__main__":
+
+    configuration = Configuration()
 
     # signal.signal(signal.SIGINT, signal_handler)
     file_name = "validation/" + str(configuration.SDO_NUMBER) + "sdos__" + str(configuration.NEIGHBOR_PROBABILITY) \

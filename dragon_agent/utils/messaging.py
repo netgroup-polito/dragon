@@ -5,8 +5,8 @@ import threading
 import pika
 
 from config.logging_configuration import LoggingConfiguration
-from sdo_node.utils.bidding_message import BiddingMessage
-from sdo_node.utils.singleton import Singleton
+from dragon_agent.utils.bidding_message import BiddingMessage
+from dragon_agent.utils.singleton import Singleton
 
 
 class Messaging(object, metaclass=Singleton):
@@ -30,24 +30,24 @@ class Messaging(object, metaclass=Singleton):
         self._message_handler = self._default_message_handler
 
     def connect(self):
-        logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
+        # logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
         self._connection = self._rabbitmq_connect(self._broker_host)
         self._channel = self._connection.channel()
         # self._write_connection = self._rabbitmq_connect(self._broker_host)
         # self._write_channel = self._write_connection.channel()
 
     def disconnect(self):
-        logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
+        # logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
         self._connection.close()
         # self._write_connection.close()
 
     def connect_write(self):
-        logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
+        # logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
         self._write_connection = self._rabbitmq_connect(self._broker_host)
         self._write_channel = self._write_connection.channel()
 
     def disconnect_write(self):
-        logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
+        # logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
         self._write_connection.close()
 
     @staticmethod
@@ -70,7 +70,7 @@ class Messaging(object, metaclass=Singleton):
         :param bool permanent:
         :return:
         """
-        logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
+        # logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
         if permanent:
             self._permanent_timeout_id = self._connection.add_timeout(
                 timeout, self.stop_consuming)
@@ -83,7 +83,7 @@ class Messaging(object, metaclass=Singleton):
         """
         Delete the current timeout
         """
-        logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
+        # logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
         if self._timeout_id is not None:
             self._connection.remove_timeout(self._timeout_id)
             self._timeout_id = None
@@ -95,7 +95,7 @@ class Messaging(object, metaclass=Singleton):
         :param timeout:
         :return: the new id
         """
-        logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
+        # logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
         self._connection.remove_timeout(timeout_id)
         return self._connection.add_timeout(timeout, self.stop_consuming)
 
@@ -106,7 +106,7 @@ class Messaging(object, metaclass=Singleton):
         :param BiddingMessage message:
         :return:
         """
-        logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
+        # logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
         # self._channel.queue_declare(queue=dst)
         # self._channel.basic_publish(exchange='', routing_key=dst, body=json.dumps(message.to_dict()))
         self._write_channel.queue_declare(queue=dst)
@@ -132,7 +132,7 @@ class Messaging(object, metaclass=Singleton):
 
         :return:
         """
-        logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
+        # logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
         self._channel.start_consuming()
 
     def stop_consuming(self):
@@ -140,7 +140,7 @@ class Messaging(object, metaclass=Singleton):
 
         :return:
         """
-        logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
+        # logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
         logging.log(LoggingConfiguration.IMPORTANT, "Timeout!")
         self._channel.stop_consuming()
 
@@ -149,7 +149,7 @@ class Messaging(object, metaclass=Singleton):
 
         :return:
         """
-        logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
+        # logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
         message = None
         q = self._channel.queue_declare(queue=topic)
         for method, properties, body in self._channel.consume(queue=topic):
@@ -167,7 +167,7 @@ class Messaging(object, metaclass=Singleton):
         :param handler: must be a a callable that takes one parameter of type BiddingMessage
         :return:
         """
-        logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
+        # logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
         self._channel.queue_declare(queue=topic)
         if handler is None:
             handler = self._default_message_handler
@@ -179,7 +179,7 @@ class Messaging(object, metaclass=Singleton):
         """
         Stops message consuming
         """
-        logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
+        # logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
         self._channel.stop_consuming()
 
     @staticmethod
