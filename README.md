@@ -61,11 +61,16 @@ Some additional python packages are required:
     $ sudo apt install python3-pip
     $ sudo pip3 install -r requirements.txt
     
+Some tests require the metis library, please install it from source:	
+
+    $ cd [dragon]/tests/utils/nxmetis
+    # python3 setup.py install	
+
+    
 Inter agent communication is implemented over the RabbitMQ Broker. To install it use the following command: 
 
     # apt install rabbitmq-server
     
-
 ### Run
 
 Make sure rabbitmq is running:
