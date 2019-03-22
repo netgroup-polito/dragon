@@ -8,6 +8,7 @@ from config.logging_configuration import LoggingConfiguration
 from dragon_agent.utils.bidding_message import BiddingMessage
 from dragon_agent.utils.singleton import Singleton
 
+from config.config import Configuration
 
 class Messaging(object, metaclass=Singleton):
     """
@@ -57,11 +58,12 @@ class Messaging(object, metaclass=Singleton):
         :param broker_host:
         :return:
         """
-        credentials = pika.PlainCredentials('user_sdo', 'user_sdo')
+        configuration = Configuration()
+        credentials = pika.PlainCredentials(configuration.USERNAME,configuration.PASSWORD)
         parameters = pika.ConnectionParameters(
-            'localhost', 5672, 'sdo_vhost', credentials)
+            'localhost', 5672, '/', credentials)
         return pika.BlockingConnection(parameters)
-        # return pika.BlockingConnection(pika.ConnectionParameters(broker_host))
+        #return pika.BlockingConnection(pika.ConnectionParameters(broker_host))
 
     def set_stop_timeout(self, timeout, permanent=False):
         """
@@ -119,20 +121,20 @@ class Messaging(object, metaclass=Singleton):
         :param BiddingMessage message:
         :return:
         """
-        logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
+        #logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
         self._write_channel.queue_declare(queue=dst)
         self._write_channel.queue_bind(exchange='sdo_exchange', queue=dst)
         self._write_channel.basic_publish(exchange='sdo_exchange',
                                           routing_key=dst,
                                           body=json.dumps(message.to_dict()))
 
-    def create_bind_queue(self,name):
+    def create_bind_queue(self,name,exchange_name):
         self._channel.queue_declare(queue=name)
-        self._channel.queue_bind(exchange='sdo_exchange', queue=name)
+        self._channel.queue_bind(exchange=exchange_name, queue=name)
 
-    def write_create_bind_queue(self,name):
+    def write_create_bind_queue(self,name,exchange_name):
         self._write_channel.queue_declare(queue=name)
-        self._write_channel.queue_bind(exchange='sdo_exchange', queue=name)
+        self._write_channel.queue_bind(exchange=exchange_name, queue=name)
 
     def create_exchange(self, exchange, exchange_type):
         self._channel.exchange_declare(exchange, exchange_type)
@@ -192,7 +194,6 @@ class Messaging(object, metaclass=Singleton):
         :return:
         """
         # logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
-        # self._channel.queue_declare(queue=topic)
         self._channel.queue_declare(queue=topic)
         self._channel.queue_bind(exchange='sdo_exchange', queue=topic)
         if handler is None:

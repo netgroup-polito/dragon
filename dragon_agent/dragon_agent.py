@@ -88,7 +88,7 @@ class SDONode:
         logging.info("Subscribing to handle messages with topic '" + self.sdo_bidder.sdo_name + "' ...")
 
         # create queue for agent linked to this host
-        #self._messaging.create_bind_queue(self.sdo_name)
+        #self._messaging.create_bind_queue(self.sdo_name,exchange_name)
 
         # self._messaging.register_handler(self.sdo_bidder.sdo_name, self.bid_message_handler)
         self._messaging.register_handler_federation(self.sdo_bidder.sdo_name, self.bid_message_enqueue)
@@ -134,7 +134,8 @@ class SDONode:
         self._messaging.connect_write()
 
         # create queue for agent linked to this host
-        #self._messaging.write_create_bind_queue(self.sdo_name)
+        #exchange_name = 'sdo_exchange'
+        #self._messaging.write_create_bind_queue(self.sdo_name,exchange_name)
 
         self.broadcast()
         while self.end_time == 0:

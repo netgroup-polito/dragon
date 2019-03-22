@@ -1,6 +1,6 @@
 ## DRAGON v1.0 README
 
-Updated Jul 30, 2018
+Updated March 22, 2019
 
 
 #### @Copyright
@@ -71,6 +71,49 @@ Inter agent communication is implemented over the RabbitMQ Broker. To install it
 
     # apt install rabbitmq-server
     
+### Rabbit Federation
+
+To use Federation, RabbitMQ Broker must be configured with a User, Policy and Federation Upstreams.
+
+First of all install Federation Plugin:
+
+    $ sudo /usr/sbin/rabbitmq-plugins enable rabbitmq_federation rabbitmq_federation_management
+
+then restart RabbitMQ.
+
+In order to setup the federation between the different RabbitMQ servers, you will need to a bit of command
+line work on each of the servers.
+
+Setup a new user and modify the [config/config.ini]() file with the chosen credentials:
+
+    $ sudo rabbitmqctl add_user username password
+    $ sudo rabbitmqctl set_user_tags username administrator
+    $ sudo rabbitmqctl set_permissions -p / username ".*" ".*" ".*"
+
+Then for example, on rabbit1 Broker, federate to 2 and 3:
+
+    $ sudo rabbitmqctl set_parameter federation-upstream rabbit2 '{"uri":"amqp://username:password@10.0.0.1"}'
+    $ sudo rabbitmqctl set_parameter federation-upstream rabbit3 '{"uri":"amqp://username:password@10.0.0.2"}'
+    $ sudo rabbitmqctl set_parameter federation-upstream-set sdo '[{"upstream":"rabbit2"},{"upstream":"rabbit3"}]'
+    $ sudo rabbitmqctl set_policy --apply-to exchanges federate-sdo ".*sdo.*" '{"federation-upstream-set":"sdo"}'
+
+This does the following:
+
+* Define two upstream nodes (named rabbit2 and rabbit3) and assign them the correct addresses. Then build an upstream-set
+  called 'sdo' that contains those two nodes
+* Create a policy (called 'federate-sdo') that selects all exchange whose name contains 'sdo' and federate them to the
+  upstream-set 'sdo'
+
+You will need to run a similar set of commands on each node to connect them as well.
+
+All this can be done from the RabbitMQ Web UI by activating the plugin 'rabbitmq_management':
+
+    $ sudo /usr/sbin/rabbitmq-plugins enable rabbitmq_management
+
+The RabbitMQ Web UI are available on http://localhost:15672.
+
+
+
 ### Run
 
 Make sure rabbitmq is running:

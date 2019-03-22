@@ -7,7 +7,7 @@ from dragon_agent.utils.singleton import Singleton
 
 class Configuration(object, metaclass=Singleton):
 
-    def __init__(self, conf_file='config/default-config.ini'):
+    def __init__(self, conf_file='config/config.ini'):
 
         self.conf_file = conf_file
 
@@ -49,6 +49,10 @@ class Configuration(object, metaclass=Singleton):
 
             # [problem]
             self.RAP_INSTANCE = config.get('problem', 'rap_instance')
+
+            # [user]
+            self.USERNAME = config.get('user', 'username')
+            self.PASSWORD = config.get('user', 'password')
 
         except Exception as ex:
             raise WrongConfigurationFile(str(ex))

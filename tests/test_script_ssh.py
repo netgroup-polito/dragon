@@ -6,6 +6,7 @@ import hashlib
 import json
 import pprint
 import shutil
+import os
 # import threading
 import time
 
@@ -29,7 +30,7 @@ from tests.utils.graph import Graph
 
 # list of the remote hosts network addresses
 #remote_hosts = ["127.0.0.1", "127.0.0.1"]
-remote_hosts = ["10.0.0.188", "10.0.0.63"]
+remote_hosts = ["127.0.0.1","10.0.0.63", "10.0.0.188", "10.0.0.143"] #localhost, dragon2, dragon3, dragon4
 #remote_hosts = ["pc336.emulab.net"]
 # remote username for ssh
 remote_username = "gabriele"
@@ -117,6 +118,15 @@ for address in remote_hosts:
                                              'rm -r {}'.format(configuration.RESULTS_FOLDER))
     exit_status = stdout.channel.recv_exit_status()
     print("{} {} {} {}".format(stdin, stdout.readlines(), stderr.readlines(), exit_status))
+
+    '''
+    # clean log files
+    stdin, stdout, stderr = ssh.exec_command('cd {}'.format(remote_dragon_path) + '; ' +
+                     "rm *.log")
+    exit_status = stdout.channel.recv_exit_status()
+    print("{} {} {} {}".format(stdin, stdout.readlines(), stderr.readlines(), exit_status))
+    '''
+
     ssh.close()
 
 # clean result directory
@@ -182,6 +192,10 @@ for i, t in enumerate(p_list):
 
 print(" - Collect Results - ")
 
+result_tmp_folder = "/resultTmp"
+if not os.path.exists(os.getcwd()+result_tmp_folder):
+    os.makedirs(os.getcwd()+result_tmp_folder)
+
 # fetch remote result files
 for address in remote_hosts:
     ssh.connect(address, username=remote_username)
@@ -192,12 +206,19 @@ for address in remote_hosts:
 
     scp = SCPClient(ssh.get_transport())
     # results
-    scp.get(remote_dragon_path + "/" + configuration.RESULTS_FOLDER + "/", recursive=True)
+    scp.get(remote_dragon_path + "/" + configuration.RESULTS_FOLDER + "/",local_path=os.getcwd()+"/"+result_tmp_folder ,recursive=True)
     # logs
     for log_file in log_files:
         scp.get(remote_dragon_path + "/" + log_file)
     scp.close()
     ssh.close()
+
+if os.path.exists(os.getcwd()+"/"+configuration.RESULTS_FOLDER):
+    shutil.rmtree(configuration.RESULTS_FOLDER)
+
+shutil.move(os.getcwd()+"/"+result_tmp_folder+"/"+configuration.RESULTS_FOLDER,os.getcwd())
+
+shutil.rmtree(os.getcwd()+result_tmp_folder)
 
 # fetch post process information
 placements = dict()
