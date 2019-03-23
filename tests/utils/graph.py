@@ -2,7 +2,8 @@ from collections import OrderedDict
 
 from community import community_louvain
 import networkx as nx
-import tests.utils.nxmetis.nxmetis as nxmetis
+#import tests.utils.nxmetis.nxmetis as nxmetis
+import nxmetis
 
 
 class Graph:

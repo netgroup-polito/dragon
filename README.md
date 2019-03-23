@@ -48,9 +48,13 @@ Download the source code by cloning the repository, as well as any submodule:
 
 ### Configuration
 
+[config/default\_config.ini]() -- main configuration file  
 [config/config.py]() -- agent and instance configuration  
 [config/rap\_instance.json]() -- resource assignment problem instance values
 
+Please create a copy of the main configuration file, and edit your configuration according with your own setup:
+
+    $ cp config/default_config.ini config/config.ini
 
 ### Install
 
@@ -63,9 +67,9 @@ Some additional python packages are required:
     
 Some tests require the metis library, please install it from source:	
 
+    $ pip3 install Cython
     $ cd [dragon]/tests/utils/nxmetis
     # python3 setup.py install	
-
     
 Inter agent communication is implemented over the RabbitMQ Broker. To install it use the following command: 
 

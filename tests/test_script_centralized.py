@@ -15,7 +15,7 @@ from resource_assignment.resource_assignment_problem import ResourceAllocationPr
 p_list = list()
 
 # [ Configuration ]
-CONF_FILE = 'default-config.ini'
+CONF_FILE = 'config/config.ini'
 configuration = Configuration(CONF_FILE)
 print("SDO_NUMBER:           " + str(configuration.SDO_NUMBER))
 print("NEIGHBOR_PROBABILITY: " + str(configuration.NEIGHBOR_PROBABILITY))
