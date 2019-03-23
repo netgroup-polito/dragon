@@ -73,7 +73,7 @@ with open(configuration.RAP_INSTANCE, mode="w") as rap_file:
     rap_file.write(json.dumps(rap.to_dict(), indent=4))
 
 # purge rabbitmq queues
-purge_rabbit.purge_queues(sdos)
+purge_rabbit.purge_queues(sdos, configuration.USERNAME, configuration.PASSWORD)
 
 # clean result directory
 shutil.rmtree(configuration.RESULTS_FOLDER, ignore_errors=True)
@@ -193,4 +193,4 @@ while len(message_rates) > 0:
 print("Message rates: \n" + pprint.pformat(global_rates))
 
 # purge rabbitmq queues
-purge_rabbit.purge_queues(sdos)
+purge_rabbit.purge_queues(sdos, configuration.USERNAME, configuration.PASSWORD)
