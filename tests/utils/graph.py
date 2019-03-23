@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from community import community_louvain
+import community
 import networkx as nx
 #import tests.utils.nxmetis.nxmetis as nxmetis
 import nxmetis
@@ -40,7 +40,7 @@ class Graph:
 
             attempt = 0
             while attempt < 10:
-                clustering = community_louvain.best_partition(self.graph, resolution=try_resolution)
+                clustering = community.best_partition(self.graph, resolution=try_resolution)
                 if len(set(clustering.values())) == n_clusters:
                     break
                 elif len(set(clustering.values())) < n_clusters or try_resolution > 1.1:
