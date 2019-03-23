@@ -29,8 +29,8 @@ from tests.utils.graph import Graph
 # -------- Remote Test Configuration -------- #
 
 # list of the remote hosts network addresses
-#remote_hosts = ["127.0.0.1", "127.0.0.1"]
-remote_hosts = ["127.0.0.1","10.0.0.63", "10.0.0.188", "10.0.0.143"] #localhost, dragon2, dragon3, dragon4
+remote_hosts = ["130.192.225.154"]
+#remote_hosts = ["127.0.0.1","10.0.0.63", "10.0.0.188", "10.0.0.143"] #localhost, dragon2, dragon3, dragon4
 #remote_hosts = ["pc336.emulab.net"]
 # remote username for ssh
 remote_username = "gabriele"
@@ -50,10 +50,10 @@ def remote_sdo_worker(_host_index, _sdo_name, _services, _log_level, _conf_file)
     _ssh.load_system_host_keys()
     _ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-    _ssh.connect(remote_hosts[_host_index], username="gabriele")
+    _ssh.connect(remote_hosts[_host_index], username=remote_username)
     # time.sleep(3)
 
-    _stdin, _stdout, _stderr = _ssh.exec_command("cd dragon" + "; "
+    _stdin, _stdout, _stderr = _ssh.exec_command("cd {}".format(remote_dragon_path) + "; "
                                                  "python3 main.py {} {} -l {} -d {} -o".format(_sdo_name,
                                                                                                " ".join(_services),
                                                                                                _log_level,
@@ -153,6 +153,7 @@ print("Statistical total demand percentage: " + str(round(average_resource_deman
 print("- -------------------- - ")
 
 # distribute sdos among physical nodes
+used_hosts = set()
 sdo_distribution = graph.compute_clusters(min(len(rap.sdos), len(remote_hosts)))
 print("sdo distribution: {}".format(sdo_distribution))
 
@@ -168,6 +169,7 @@ for i in range(configuration.SDO_NUMBER):
 
     # run sdo instance on a physical node
     host = "node" + str(sdo_distribution[sdo_name])
+    used_hosts.add(remote_hosts[sdo_distribution[sdo_name]])
     print("running instance " + sdo_name + " on host " + str(sdo_distribution[sdo_name]))
 
     #t = threading.Thread(target=remote_sdo_worker, args=(host,
@@ -187,7 +189,7 @@ for i, t in enumerate(p_list):
     except TimeoutExpired:
         #ssh_clients['sdo' + str(i)].get_transport().close()
         #ssh_clients['sdo' + str(i)].close()
-        t.kill()
+        t.terminate()
         #killed.append('sdo' + str(i))
 
 print(" - Collect Results - ")
@@ -197,7 +199,7 @@ if not os.path.exists(os.getcwd()+result_tmp_folder):
     os.makedirs(os.getcwd()+result_tmp_folder)
 
 # fetch remote result files
-for address in remote_hosts:
+for address in used_hosts:
     ssh.connect(address, username=remote_username)
 
     stdin, stdout, stderr = ssh.exec_command('cd {}'.format(remote_dragon_path) + '; ' +
@@ -293,7 +295,6 @@ while len(message_rates) > 0:
 # print message rates
 print("Message rates: \n" + pprint.pformat(global_rates))
 
-'''
 # purge rabbitmq queues
 for address in remote_hosts:
     ssh.connect(address, username=remote_username)
@@ -303,4 +304,3 @@ for address in remote_hosts:
     exit_status = stdout.channel.recv_exit_status()
     print("{} {} {} {}".format(stdin, stdout.readlines(), stderr.readlines(), exit_status))
     ssh.close()
-'''
