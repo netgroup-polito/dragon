@@ -96,6 +96,16 @@ if __name__ == "__main__":
     # Start scheduling
     strong, placement, rates = sdo_node.start_distributed_scheduling()
 
+    results = {"placement": placement,
+               "rates": list(rates.items()),
+               "utility": int(sdo_node.sdo_bidder.private_utility)}
+
+    results_filename = configuration.RESULTS_FOLDER + "/results_" + SDO_NAME + ".json"
+    os.makedirs(os.path.dirname(results_filename), exist_ok=True)
+    with open(results_filename, "w") as f:
+        f.write(json.dumps(results, indent=4))
+
+    '''
     placement_filename = configuration.RESULTS_FOLDER + "/placement_" + SDO_NAME + ".json"
     os.makedirs(os.path.dirname(placement_filename), exist_ok=True)
     with open(placement_filename, "w") as f:
@@ -108,5 +118,6 @@ if __name__ == "__main__":
     utility_filename = configuration.RESULTS_FOLDER + "/utility_" + SDO_NAME + ".json"
     with open(utility_filename, "w") as f:
         f.write(str(sdo_node.sdo_bidder.private_utility))
+    '''
 
     exit(sdo_node.sdo_bidder.private_utility)

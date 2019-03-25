@@ -31,7 +31,7 @@ from tests.utils.graph import Graph
 # list of the remote hosts network addresses
 #remote_hosts = ["127.0.0.1", "127.0.0.1"]
 #remote_hosts = ["127.0.0.1","10.0.0.63", "10.0.0.188", "10.0.0.143"] #localhost, dragon2, dragon3, dragon4
-remote_hosts = ["clnode094.clemson.cloudlab.us", "clnode062.clemson.cloudlab.us", "clnode078.clemson.cloudlab.us", "clnode054.clemson.cloudlab.us"]
+remote_hosts = ["clnode036.clemson.cloudlab.us", "clnode039.clemson.cloudlab.us", "clnode029.clemson.cloudlab.us", "clnode013.clemson.cloudlab.us"]
 #remote_hosts = ["clnode094.clemson.cloudlab.us", "clnode062.clemson.cloudlab.us"]
 # remote username for ssh
 remote_username = "gabrie0"
@@ -237,9 +237,13 @@ message_rates = dict()
 private_utilities = list()
 for i in range(configuration.SDO_NUMBER):
     sdo_name = "sdo" + str(i)
+    results_file = configuration.RESULTS_FOLDER + "/results_" + sdo_name + ".json"
+
+    '''
     utility_file = configuration.RESULTS_FOLDER + "/utility_" + sdo_name + ".json"
     placement_file = configuration.RESULTS_FOLDER + "/placement_" + sdo_name + ".json"
     rates_file = configuration.RESULTS_FOLDER + "/rates_" + sdo_name + ".json"
+    '''
 
     if sdo_name in killed:
         private_utilities.append(0)
@@ -248,15 +252,20 @@ for i in range(configuration.SDO_NUMBER):
         continue
 
     try:
-        with open(utility_file, "r") as f:
-            utility = int(f.read())
-            private_utilities.append(utility)
-        with open(placement_file, "r") as f:
-            placement = json.loads(f.read())
-            placements[sdo_name] = placement
-        with open(rates_file, "r") as f:
-            rates = OrderedDict(json.loads(f.read()))
-            message_rates[sdo_name] = rates
+        # with open(utility_file, "r") as f:
+        #     utility = int(f.read())
+        #     private_utilities.append(utility)
+        # with open(placement_file, "r") as f:
+        #     placement = json.loads(f.read())
+        #     placements[sdo_name] = placement
+        # with open(rates_file, "r") as f:
+        #     rates = OrderedDict(json.loads(f.read()))
+        #     message_rates[sdo_name] = rates
+        with open(results_file) as f:
+            results = json.loads(f.read())
+            private_utilities.append(results["utility"])
+            placements[sdo_name] = results["placement"]
+            message_rates[sdo_name] = results["rates"]
     except FileNotFoundError:
         continue
 
