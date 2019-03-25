@@ -810,8 +810,8 @@ class SdoOrchestrator:
                                      reduce(lambda x, y: x + y, sorted([""]+taken_functions)) +
                                      self.sdo_name).encode('utf-8')).hexdigest(), 16)
         decimal_digest = digest/2**256
-        # perturbation_factor = (0.3-(-0.3))*decimal_digest + (-0.3)
-        perturbation_factor = 0
+        perturbation_factor = (0.3-(-0.3))*decimal_digest + (-0.3)
+        # perturbation_factor = 0
         logging.debug("av_decimal_consumption: " + str(function_consumption) + " | decimal_digest: " + str(decimal_digest))
         logging.debug("spreaded_consumption: " + str(spreaded_consumption))
         logging.debug("perturbation_factor: " + str(perturbation_factor))
@@ -820,27 +820,34 @@ class SdoOrchestrator:
         perturbated_value = spreaded_consumption+perturbation_factor
         logging.debug("perturbated_value: " + str(perturbated_value))
         # normalized_value = (perturbated_value+0.3)/1.6
-        normalized_value = perturbated_value
+        if perturbated_value < 0:
+            normalized_value = 0
+        elif perturbated_value > 1:
+            normalized_value = 1
+        else:
+            normalized_value = perturbated_value
+        # normalized_value = perturbated_value
 
         logging.debug("normalized_value: " + str(normalized_value))
 
         # scale utility according to first function
         # utility = normalized_value*first_function_spreaded_consumption
         # logging.debug("utility: " + str(utility))
-
+        '''
         if self.sdo_name == 'sdo1' or self.sdo_name == 'sdo2' or self.sdo_name == 'sdo4' or self.sdo_name == 'sdo5' or self.sdo_name == 'sdo7' or self.sdo_name == 'sdo8' or self.sdo_name == 'sdo11' or self.sdo_name == 'sdo12' or self.sdo_name == 'sdo15' or self.sdo_name == 'sdo19':
                 # or self.sdo_name == 'sdo4' or self.sdo_name == 'sdo8' or self.sdo_name == 'sdo13' or self.sdo_name == 'sdo17':
             normalized_value = 0.5
 
         if self.sdo_name == 'sdo15':
             normalized_value = 0.2
-
+        '''
         utility = normalized_value
 
         # apply node-based scaling
         scaling_factor = int(hashlib.sha256((self.sdo_name + node + service).encode()).hexdigest(), 16) / 2 ** 256
 
         if configuration.SYSTEM_UTILITY == 'NONE':
+            '''
             if self.sdo_name == 'sdo1' or self.sdo_name == 'sdo4' or self.sdo_name == 'sdo7' or self.sdo_name == 'sdo15' or self.sdo_name == 'sdo16':
                 # put a low node scaling for already used node (between 0.0 and 0.1)
                 if len(taken_services) > 1 and node in [bid_bundle[s]['node'] for s in taken_services[:-1]]:
@@ -850,14 +857,16 @@ class SdoOrchestrator:
                 if len(taken_services) > 1 and node not in [bid_bundle[s]['node'] for s in taken_services[:-1]]:
                     # return 0
                     scaling_factor = (0.1 - 0) * scaling_factor
-            # pass
+            '''
+            pass
         elif configuration.SYSTEM_UTILITY == 'FEW-NODES':
             # put a low node scaling for not used node (between 0.0 and 0.1)
             if len(taken_services) > 1 and node not in [bid_bundle[s]['node'] for s in taken_services[:-1]]:
                 scaling_factor = (0.1 - 0) * scaling_factor
             # put an high node scaling for the last used node (between 0.7 and 1)
-            #if len(taken_services) > 1 and bid_bundle[taken_services[-2]]['node'] == node:
-            #    scaling_factor = (1 - 0.7) * scaling_factor + 0.7
+            if len(taken_services) > 1 and bid_bundle[taken_services[-2]]['node'] == node:
+                scaling_factor = (1 - 0.7) * scaling_factor + 0.7
+
         elif configuration.SYSTEM_UTILITY == 'MANY-NODES':
             # put a low node scaling for already used node (between 0.0 and 0.3)
             if len(taken_services) > 1 and node in [bid_bundle[s]['node'] for s in taken_services[:-1]]:
@@ -875,7 +884,7 @@ class SdoOrchestrator:
         logging.debug("sdo-based scaled utility: " + str(utility))
 
         # this is the sigmoid (for normalization) - use '_gen_log_func' instead?
-        utility = 1.043935 + (0.0002072756 - 1.043935)/(1 + (utility/0.1348168)**1.411127)
+        #utility = 1.043935 + (0.0002072756 - 1.043935)/(1 + (utility/0.1348168)**1.411127)
 
         # put the utility value between inf and sup
         utility = (sup - inf) * utility + inf
