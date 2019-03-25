@@ -29,11 +29,12 @@ from tests.utils.graph import Graph
 # -------- Remote Test Configuration -------- #
 
 # list of the remote hosts network addresses
-remote_hosts = ["130.192.225.154"]
+#remote_hosts = ["127.0.0.1", "127.0.0.1"]
 #remote_hosts = ["127.0.0.1","10.0.0.63", "10.0.0.188", "10.0.0.143"] #localhost, dragon2, dragon3, dragon4
-#remote_hosts = ["pc336.emulab.net"]
+remote_hosts = ["clnode094.clemson.cloudlab.us", "clnode062.clemson.cloudlab.us", "clnode078.clemson.cloudlab.us", "clnode054.clemson.cloudlab.us"]
+#remote_hosts = ["clnode094.clemson.cloudlab.us", "clnode062.clemson.cloudlab.us"]
 # remote username for ssh
-remote_username = "gabriele"
+remote_username = "gabrie0"
 # location of the dragon main folder on the remote hosts (both relative and absolute paths are ok)
 remote_dragon_path = "dragon"
 # local configuration file (will be copied on remote hosts)
@@ -101,6 +102,13 @@ ssh.load_system_host_keys()
 
 for address in remote_hosts:
     ssh.connect(address, username=remote_username)
+
+    # kill any old process
+    if address != 'localhost' and address != '127.0.0.1':
+        stdin, stdout, stderr = ssh.exec_command('killall python3')
+        exit_status = stdout.channel.recv_exit_status()
+        print("{} {} {} {}".format(stdin, stdout.readlines(), stderr.readlines(), exit_status))
+
     # purge rabbitmq queues
     stdin, stdout, stderr = ssh.exec_command('cd {}'.format(remote_dragon_path) + '; ' +
                                              'python3 -m scripts.purge_rabbit')
@@ -190,6 +198,7 @@ for i, t in enumerate(p_list):
         #ssh_clients['sdo' + str(i)].get_transport().close()
         #ssh_clients['sdo' + str(i)].close()
         t.terminate()
+        print("WARNING: Possible incomplete output")
         #killed.append('sdo' + str(i))
 
 print(" - Collect Results - ")
@@ -304,3 +313,4 @@ for address in remote_hosts:
     exit_status = stdout.channel.recv_exit_status()
     print("{} {} {} {}".format(stdin, stdout.readlines(), stderr.readlines(), exit_status))
     ssh.close()
+
