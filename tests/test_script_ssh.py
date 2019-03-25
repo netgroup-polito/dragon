@@ -211,16 +211,16 @@ if not os.path.exists(os.getcwd()+result_tmp_folder):
 for address in used_hosts:
     ssh.connect(address, username=remote_username)
 
-    stdin, stdout, stderr = ssh.exec_command('cd {}'.format(remote_dragon_path) + '; ' +
-                                             "ls *.log")
-    log_files = list(map(bytes.decode, stdout.read().splitlines()))
+    # stdin, stdout, stderr = ssh.exec_command('cd {}'.format(remote_dragon_path) + '; ' +
+    #                                         "ls *.log")
+    # log_files = list(map(bytes.decode, stdout.read().splitlines()))
 
     scp = SCPClient(ssh.get_transport())
     # results
-    scp.get(remote_dragon_path + "/" + configuration.RESULTS_FOLDER + "/",local_path=os.getcwd()+"/"+result_tmp_folder ,recursive=True)
+    scp.get(remote_dragon_path + "/" + configuration.RESULTS_FOLDER + "/", local_path=os.getcwd()+"/"+result_tmp_folder, recursive=True)
     # logs
-    for log_file in log_files:
-        scp.get(remote_dragon_path + "/" + log_file)
+    # for log_file in log_files:
+    #    scp.get(remote_dragon_path + "/" + log_file)
     scp.close()
     ssh.close()
 
@@ -304,6 +304,7 @@ while len(message_rates) > 0:
 # print message rates
 print("Message rates: \n" + pprint.pformat(global_rates))
 
+'''
 # purge rabbitmq queues
 for address in remote_hosts:
     ssh.connect(address, username=remote_username)
@@ -313,4 +314,4 @@ for address in remote_hosts:
     exit_status = stdout.channel.recv_exit_status()
     print("{} {} {} {}".format(stdin, stdout.readlines(), stderr.readlines(), exit_status))
     ssh.close()
-
+'''

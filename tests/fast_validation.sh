@@ -12,10 +12,14 @@ bundle_percentage=40
 agreement_timeout=3
 weak_agreement_timeout=6
 
+# NONE | MANY-NODES | FEW-NODES
+policy="NONE"
+
 rm -r -f validation/
 mkdir validation
 
 sed -i "/load_topology/c\load_topology = true" ${CONFIG_FILE}
+sed -i "/system_utility/c\system_utility = ${policy}" ${CONFIG_FILE}
 
 agents_number=3
 sed -i "/agents_number/c\agents_number = ${agents_number}" ${CONFIG_FILE}
@@ -24,12 +28,13 @@ while [ ${agents_number} -le 20 ]; do
     file_name="validation/"${agents_number}"sdos__"${neighbor_probability}"neighbor_prob__"${node_number}"nodes.txt"
     echo "Output file: "${file_name}
     echo -e > ${file_name}
-    echo ${agents_number}" sdos, "${neighbor_probability}" neighbor_prob, "${node_number}" nodes " > ${file_name}
+    echo ${agents_number}" sdos, "${neighbor_probability}" neighbor_prob, "${node_number}" nodes" > ${file_name}
+    echo "System policy: "${policy} > ${file_name}
 
-    bundle_percentage=50
+    bundle_percentage=40
     sed -i "/bundle_percentage/c\bundle_percentage = ${bundle_percentage}" ${CONFIG_FILE}
 
-    while [ ${bundle_percentage} -le 50 ]; do
+    while [ ${bundle_percentage} -le 60 ]; do
 
         # increase timeout according with the problem size
         agreement_timeout=$(($((50*${bundle_percentage}/80 + 30*${agents_number}/30 + 20*${node_number}/4))/10))
@@ -50,7 +55,7 @@ while [ ${agents_number} -le 20 ]; do
         echo -e "SAMPLE_FREQUENCY = "${sample_frequency}
 
         repetition=1
-        while [ ${repetition} -le 10 ]; do
+        while [ ${repetition} -le 5 ]; do
 
             # print repetition number
             echo -e "repetition no."${repetition}
