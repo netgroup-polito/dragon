@@ -7,6 +7,7 @@ import json
 import pprint
 import shutil
 import os
+import zipfile
 # import threading
 import time
 
@@ -31,14 +32,15 @@ from tests.utils.graph import Graph
 # list of the remote hosts network addresses
 #remote_hosts = ["127.0.0.1", "127.0.0.1"]
 #remote_hosts = ["127.0.0.1","10.0.0.63", "10.0.0.188", "10.0.0.143"] #localhost, dragon2, dragon3, dragon4
-remote_hosts = ["clnode036.clemson.cloudlab.us", "clnode039.clemson.cloudlab.us", "clnode029.clemson.cloudlab.us", "clnode013.clemson.cloudlab.us"]
-#remote_hosts = ["clnode094.clemson.cloudlab.us", "clnode062.clemson.cloudlab.us"]
+remote_hosts = ["clnode114.clemson.cloudlab.us", "clnode097.clemson.cloudlab.us", "clnode123.clemson.cloudlab.us"]
+# remote_hosts = ["clnode114.clemson.cloudlab.us", "clnode097.clemson.cloudlab.us"]
 # remote username for ssh
 remote_username = "gabrie0"
 # location of the dragon main folder on the remote hosts (both relative and absolute paths are ok)
 remote_dragon_path = "dragon"
 # local configuration file (will be copied on remote hosts)
 CONF_FILE = 'config/config.ini'
+
 
 # ------------------------------------------- #
 
@@ -103,37 +105,25 @@ ssh.load_system_host_keys()
 for address in remote_hosts:
     ssh.connect(address, username=remote_username)
 
+    command = ""
     # kill any old process
     if address != 'localhost' and address != '127.0.0.1':
-        stdin, stdout, stderr = ssh.exec_command('killall python3')
-        exit_status = stdout.channel.recv_exit_status()
-        print("{} {} {} {}".format(stdin, stdout.readlines(), stderr.readlines(), exit_status))
+        command += 'killall python3; '
 
     # purge rabbitmq queues
-    stdin, stdout, stderr = ssh.exec_command('cd {}'.format(remote_dragon_path) + '; ' +
-                                             'python3 -m scripts.purge_rabbit')
-    exit_status = stdout.channel.recv_exit_status()
-    print("{} {} {} {}".format(stdin, stdout.readlines(), stderr.readlines(), exit_status))
+    command += 'cd {}'.format(remote_dragon_path) + '; ' + 'python3 -m scripts.purge_rabbit; '
 
     # copy configuration, instance and topology
     scp = SCPClient(ssh.get_transport())
-    scp.put([CONF_FILE, configuration.RAP_INSTANCE, configuration.TOPOLOGY_FILE],
+    scp.put([CONF_FILE, configuration.RAP_INSTANCE],
             remote_dragon_path + "/config/")
     scp.close()
 
     # clean result directories
-    stdin, stdout, stderr = ssh.exec_command('cd {}'.format(remote_dragon_path) + '; ' +
-                                             'rm -r {}'.format(configuration.RESULTS_FOLDER))
+    command += 'rm -r {}'.format(configuration.RESULTS_FOLDER)
+    stdin, stdout, stderr = ssh.exec_command(command)
     exit_status = stdout.channel.recv_exit_status()
     print("{} {} {} {}".format(stdin, stdout.readlines(), stderr.readlines(), exit_status))
-
-    '''
-    # clean log files
-    stdin, stdout, stderr = ssh.exec_command('cd {}'.format(remote_dragon_path) + '; ' +
-                     "rm *.log")
-    exit_status = stdout.channel.recv_exit_status()
-    print("{} {} {} {}".format(stdin, stdout.readlines(), stderr.readlines(), exit_status))
-    '''
 
     ssh.close()
 
@@ -199,37 +189,42 @@ for i, t in enumerate(p_list):
         #ssh_clients['sdo' + str(i)].close()
         t.terminate()
         print("WARNING: Possible incomplete output")
-        #killed.append('sdo' + str(i))
+        killed.append('sdo' + str(i))
 
 print(" - Collect Results - ")
 
-result_tmp_folder = "/resultTmp"
-if not os.path.exists(os.getcwd()+result_tmp_folder):
-    os.makedirs(os.getcwd()+result_tmp_folder)
+result_tmp_folder = "resultTmp"
+if os.path.exists(result_tmp_folder+"/"+configuration.RESULTS_FOLDER):
+    shutil.rmtree(result_tmp_folder+"/"+configuration.RESULTS_FOLDER)
+if not os.path.exists(result_tmp_folder+"/"+configuration.RESULTS_FOLDER):
+    os.makedirs(result_tmp_folder+"/"+configuration.RESULTS_FOLDER)
 
 # fetch remote result files
 for address in used_hosts:
     ssh.connect(address, username=remote_username)
 
-    # stdin, stdout, stderr = ssh.exec_command('cd {}'.format(remote_dragon_path) + '; ' +
-    #                                         "ls *.log")
-    # log_files = list(map(bytes.decode, stdout.read().splitlines()))
+    stdin, stdout, stderr = ssh.exec_command('cd {}/{}'.format(remote_dragon_path, configuration.RESULTS_FOLDER) + '; zip validation.zip *')
+    exit_status = stdout.channel.recv_exit_status()
+    print("{} {} {} {}".format(stdin, stdout.readlines(), stderr.readlines(), exit_status))
 
     scp = SCPClient(ssh.get_transport())
     # results
-    scp.get(remote_dragon_path + "/" + configuration.RESULTS_FOLDER + "/", local_path=os.getcwd()+"/"+result_tmp_folder, recursive=True)
+    scp.get(remote_dragon_path+'/'+configuration.RESULTS_FOLDER+'/validation.zip', local_path=result_tmp_folder+"/"+configuration.RESULTS_FOLDER+"/")
+    zip_ref = zipfile.ZipFile(result_tmp_folder+"/"+configuration.RESULTS_FOLDER+"/validation.zip", 'r')
+    zip_ref.extractall(result_tmp_folder+"/"+configuration.RESULTS_FOLDER)
+    zip_ref.close()
+    os.remove(result_tmp_folder+"/"+configuration.RESULTS_FOLDER+"/validation.zip")
     # logs
     # for log_file in log_files:
     #    scp.get(remote_dragon_path + "/" + log_file)
     scp.close()
     ssh.close()
 
-if os.path.exists(os.getcwd()+"/"+configuration.RESULTS_FOLDER):
+if os.path.exists(configuration.RESULTS_FOLDER):
     shutil.rmtree(configuration.RESULTS_FOLDER)
 
-shutil.move(os.getcwd()+"/"+result_tmp_folder+"/"+configuration.RESULTS_FOLDER,os.getcwd())
-
-shutil.rmtree(os.getcwd()+result_tmp_folder)
+shutil.move(result_tmp_folder+"/"+configuration.RESULTS_FOLDER,os.getcwd())
+shutil.rmtree(result_tmp_folder)
 
 # fetch post process information
 placements = dict()
@@ -239,12 +234,6 @@ for i in range(configuration.SDO_NUMBER):
     sdo_name = "sdo" + str(i)
     results_file = configuration.RESULTS_FOLDER + "/results_" + sdo_name + ".json"
 
-    '''
-    utility_file = configuration.RESULTS_FOLDER + "/utility_" + sdo_name + ".json"
-    placement_file = configuration.RESULTS_FOLDER + "/placement_" + sdo_name + ".json"
-    rates_file = configuration.RESULTS_FOLDER + "/rates_" + sdo_name + ".json"
-    '''
-
     if sdo_name in killed:
         private_utilities.append(0)
         placements[sdo_name] = []
@@ -252,20 +241,11 @@ for i in range(configuration.SDO_NUMBER):
         continue
 
     try:
-        # with open(utility_file, "r") as f:
-        #     utility = int(f.read())
-        #     private_utilities.append(utility)
-        # with open(placement_file, "r") as f:
-        #     placement = json.loads(f.read())
-        #     placements[sdo_name] = placement
-        # with open(rates_file, "r") as f:
-        #     rates = OrderedDict(json.loads(f.read()))
-        #     message_rates[sdo_name] = rates
         with open(results_file) as f:
             results = json.loads(f.read())
             private_utilities.append(results["utility"])
             placements[sdo_name] = results["placement"]
-            message_rates[sdo_name] = results["rates"]
+            message_rates[sdo_name] = OrderedDict(results["rates"])
     except FileNotFoundError:
         continue
 

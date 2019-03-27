@@ -116,6 +116,7 @@ for i, p in enumerate(p_list):
         p.wait(timeout=50)
     except TimeoutExpired:
         p.kill()
+        print("WARNING: Possible incomplete output")
         killed.append('sdo' + str(i))
 
 print(" - Collect Results - ")
@@ -125,9 +126,7 @@ message_rates = dict()
 private_utilities = list()
 for i in range(configuration.SDO_NUMBER):
     sdo_name = "sdo" + str(i)
-    utility_file = configuration.RESULTS_FOLDER + "/utility_" + sdo_name + ".json"
-    placement_file = configuration.RESULTS_FOLDER + "/placement_" + sdo_name + ".json"
-    rates_file = configuration.RESULTS_FOLDER + "/rates_" + sdo_name + ".json"
+    results_file = configuration.RESULTS_FOLDER + "/results_" + sdo_name + ".json"
 
     if sdo_name in killed:
         private_utilities.append(0)
@@ -136,15 +135,11 @@ for i in range(configuration.SDO_NUMBER):
         continue
 
     try:
-        with open(utility_file, "r") as f:
-            utility = int(f.read())
-            private_utilities.append(utility)
-        with open(placement_file, "r") as f:
-            placement = json.loads(f.read())
-            placements[sdo_name] = placement
-        with open(rates_file, "r") as f:
-            rates = OrderedDict(json.loads(f.read()))
-            message_rates[sdo_name] = rates
+        with open(results_file) as f:
+            results = json.loads(f.read())
+            private_utilities.append(results["utility"])
+            placements[sdo_name] = results["placement"]
+            message_rates[sdo_name] = OrderedDict(results["rates"])
     except FileNotFoundError:
         continue
 
