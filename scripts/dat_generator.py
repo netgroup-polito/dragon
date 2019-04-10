@@ -83,6 +83,11 @@ for i in range(FIRST, LAST):
             last_update = 0
             sent_messages = 0
             received_messages = 0
+
+            # statistical total demand percentage
+            p = s[s.find("Statistical total demand percentage:") + len("Statistical total demand percentage:"):s.find("Statistical total demand percentage:") + len("Statistical total demand percentage:") + s[s.find("Statistical total demand percentage:") + len("Statistical total demand percentage:"):].index("\n")]
+            demand_percentages[i][j].append(round(float(p), 3))
+
             for sdo in range(i):
                 try:
                     # read last update time
@@ -108,9 +113,7 @@ for i in range(FIRST, LAST):
             # collect data for this sample
             # last update time
             last_updates[i][j].append(last_update)
-            # statistical total demand percentage
-            p = s[s.find("Statistical total demand percentage:") + len("Statistical total demand percentage:"):s.find("Statistical total demand percentage:") + len("Statistical total demand percentage:") + s[s.find("Statistical total demand percentage:") + len("Statistical total demand percentage:"):].index("\n")]
-            demand_percentages[i][j].append(round(float(p), 3))
+
             # sum of private utilities:
             p = s[s.find("Sum of private utilities:") + len("Sum of private utilities:"):s.find("Sum of private utilities:") + len("Sum of private utilities:") + s[s.find("Sum of private utilities:") + len("Sum of private utilities:"):].index("\n")]
             sum_private_utilities_l[i][j].append(int(p))

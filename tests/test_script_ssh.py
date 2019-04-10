@@ -9,38 +9,28 @@ import shutil
 import os
 import zipfile
 # import threading
-import time
-
 import paramiko
-
 import itertools
-# from numpy import random
+
 from collections import OrderedDict
-
 from subprocess import TimeoutExpired
-
 from scp import SCPClient
 
 from config.config import Configuration
 from resource_assignment.resource_assignment_problem import ResourceAllocationProblem
-
 from tests.utils.graph import Graph
 
 
 # -------- Remote Test Configuration -------- #
 
 # list of the remote hosts network addresses
-#remote_hosts = ["127.0.0.1", "127.0.0.1"]
-#remote_hosts = ["127.0.0.1","10.0.0.63", "10.0.0.188", "10.0.0.143"] #localhost, dragon2, dragon3, dragon4
-remote_hosts = ["clnode114.clemson.cloudlab.us", "clnode097.clemson.cloudlab.us", "clnode123.clemson.cloudlab.us"]
-# remote_hosts = ["clnode114.clemson.cloudlab.us", "clnode097.clemson.cloudlab.us"]
+remote_hosts = ["127.0.0.1"]
 # remote username for ssh
-remote_username = "gabrie0"
+remote_username = "gabriele"
 # location of the dragon main folder on the remote hosts (both relative and absolute paths are ok)
 remote_dragon_path = "dragon"
 # local configuration file (will be copied on remote hosts)
 CONF_FILE = 'config/config.ini'
-
 
 # ------------------------------------------- #
 
@@ -170,7 +160,7 @@ for i in range(configuration.SDO_NUMBER):
     used_hosts.add(remote_hosts[sdo_distribution[sdo_name]])
     print("running instance " + sdo_name + " on host " + str(sdo_distribution[sdo_name]))
 
-    #t = threading.Thread(target=remote_sdo_worker, args=(host,
+    # t = threading.Thread(target=remote_sdo_worker, args=(host,
     t = multiprocessing.Process(target=remote_sdo_worker, args=(sdo_distribution[sdo_name],
                                                                 sdo_name,
                                                                 service_bundle,
@@ -185,8 +175,6 @@ for i, t in enumerate(p_list):
     try:
         t.join(timeout=50)
     except TimeoutExpired:
-        #ssh_clients['sdo' + str(i)].get_transport().close()
-        #ssh_clients['sdo' + str(i)].close()
         t.terminate()
         print("WARNING: Possible incomplete output")
         killed.append('sdo' + str(i))

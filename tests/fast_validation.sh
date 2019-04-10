@@ -33,11 +33,11 @@ while [ ${agents_number} -le 20 ]; do
 
     bundle_percentage=40
     sed -i "/bundle_percentage/c\bundle_percentage = ${bundle_percentage}" ${CONFIG_FILE}
-
     while [ ${bundle_percentage} -le 60 ]; do
 
         # increase timeout according with the problem size
         agreement_timeout=$(($((50*${bundle_percentage}/80 + 30*${agents_number}/30 + 20*${node_number}/4))/10))
+        # agreement_timeout=$(($(($((50*${bundle_percentage}/60 + 30*${agents_number}/10 + 20*${node_number}/4))/10))/2))
         weak_agreement_timeout=$((${agreement_timeout}*2))
         sed -i "/\bagreement_timeout\b/c\agreement_timeout = ${agreement_timeout}" ${CONFIG_FILE}
         sed -i "/weak_agreement_timeout/c\weak_agreement_timeout = ${weak_agreement_timeout}" ${CONFIG_FILE}

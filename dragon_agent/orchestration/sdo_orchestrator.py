@@ -724,10 +724,6 @@ class SdoOrchestrator:
         elif configuration.PRIVATE_UTILITY == "NODE-LOADING":
             return self._node_loading_marginal_utility(bid_bundle, service, function, node, submodular=spu)
         elif configuration.PRIVATE_UTILITY == "BEST-FIT-POLICY":
-            # if self.sdo_name == 'sdo1' or self.sdo_name == 'sdo4' or self.sdo_name == 'sdo7' or self.sdo_name == 'sdo10' or self.sdo_name == 'sdo13' or self.sdo_name == 'sdo19':
-            #     return self._load_balancer_marginal_utility(bid_bundle, service, function, node, submodular=spu)
-            # elif self.sdo_name == 'sdo8' or self.sdo_name == 'sdo11' or self.sdo_name == 'sdo12' or self.sdo_name == 'sdo15' or self.sdo_name == 'sdo16' or self.sdo_name == 'sdo18':
-            #     return self._node_loading_marginal_utility(bid_bundle, service, function, node, submodular=spu)
             if self.sdo_name == 'sdo1' or self.sdo_name == 'sdo2' or self.sdo_name == 'sdo4' or self.sdo_name == 'sdo5' or self.sdo_name == 'sdo10' or self.sdo_name == 'sdo11' or self.sdo_name == 'sdo13' or self.sdo_name == 'sdo14' or self.sdo_name == 'sdo15':
                 return self._load_balancer_marginal_utility(bid_bundle, service, function, node, submodular=spu)
             elif self.sdo_name == 'sdo12' or self.sdo_name == 'sdo13' or self.sdo_name == 'sdo17':
@@ -798,6 +794,8 @@ class SdoOrchestrator:
             if inf == 0:
                 inf = 1
         else:
+            taken_services.append(service)
+            taken_functions.append(function)
             inf = 1
             sup = 100
         logging.debug("inf: " + str(inf) + " | sup: " + str(sup))
