@@ -85,39 +85,25 @@ First of all install Federation Plugin:
 
 then restart RabbitMQ.
 
-In order to setup the federation between the different RabbitMQ servers, you will need to a bit of command
-line work on each of the servers.
+In order to setup the federation between the different RabbitMQ servers, you can:
+* Follow the manual installation described in [README_RABBITMQ.md]() 
+* Run the script [script/rabbit_setup.py]() as superuser:
 
-Setup a new user (e.g., dragon:dragon) and modify the [config/config.ini]() file with the chosen credentials:
+        $ sudo python3 -m script.rabbit_setup
 
-    $ sudo rabbitmqctl add_user dragon dragon
-    $ sudo rabbitmqctl set_user_tags dragon administrator
-    $ sudo rabbitmqctl set_permissions -p / dragon ".*" ".*" ".*"
+The script create a new user, a Policy and all Federation Upstreams.
 
-Then for example, on rabbit0 Broker, federate to 1 and 2:
+To decide with which broker to federate, the peers list must be modified in the script.
+For example, on rabbit0 Broker, federate to 1 and 2 the list will be:
 
-    $ sudo rabbitmqctl set_parameter federation-upstream rabbit1 '{"uri":"amqp://dragon:dragon@10.0.0.1"}'
-    $ sudo rabbitmqctl set_parameter federation-upstream rabbit2 '{"uri":"amqp://dragon:dragon@10.0.0.2"}'
-    $ sudo rabbitmqctl set_parameter federation-upstream-set sdo '[{"upstream":"rabbit1"},{"upstream":"rabbit2"}]'
-    $ sudo rabbitmqctl set_policy --apply-to exchanges federate-sdo ".*sdo.*" '{"federation-upstream-set":"sdo"}'
+    peers = [["rabbit1", "10.0.0.1"],["rabbit2","10.0.0.2"]]
 
-This does the following:
+Where "rabbit1" is the name of federation upstream towards the rabbit1 Broker.
 
-* Define two upstream nodes (rabbit1 and rabbit2) and assign them the correct addresses. Then build an upstream-set
-  called 'sdo' that contains those two nodes
-* Create a policy (called 'federate-sdo') that selects all exchange whose name contains 'sdo' and federate them to the
-  upstream-set 'sdo'
+You can modify the [config/config.ini]() file with the chosen credentials and federation parameters.
 
-You will need to run a similar set of commands on each other rabbit instance to connect them as well.
-
-All this can be done from the RabbitMQ Web UI by activating the plugin 'rabbitmq_management':
-
-    $ sudo /usr/sbin/rabbitmq-plugins enable rabbitmq_management
-
-The RabbitMQ Web UI are available on http://localhost:15672.
-
-
-
+    
+    
 ### Run
 
 Make sure rabbitmq is running:
