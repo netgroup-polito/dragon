@@ -54,5 +54,11 @@ class Configuration(object, metaclass=Singleton):
             self.USERNAME = config.get('user', 'username')
             self.PASSWORD = config.get('user', 'password')
 
+            # [federation]
+            self.EXCHANGE = config.get('federation','exchange_name')
+            self.SET_NAME = config.get('federation', 'set_name')
+            self.POLICY_NAME = config.get('federation', 'policy_name')
+            self.PATTERN = config.get('federation', 'pattern')
+
         except Exception as ex:
             raise WrongConfigurationFile(str(ex))
