@@ -6,13 +6,19 @@
 *.DS_Store
 .DS_Store
 .settings
-config/*.ini
-!config/default-config.ini
+*.pyc
+
 
 .idea/
 __pycache__/
 
 validation/
 results/
+config/*.ini
+!config/default-config.ini
+config/*.json
+!config/rap_instance.json
+!config/topology.json
+!config/topology_full_mesh.json
 *tmp*
 *.zip

@@ -109,10 +109,10 @@ class SDONode:
         logging.log(LoggingConfiguration.IMPORTANT, "Agreement process reached convergence! " +
                                                     "(strong=" + str(strong_agreement) + ")")
         if self.sdo_name in self.sdo_bidder.get_winners():
-            logging.info(" - Sdo '" + self.sdo_name + " got enough resources to implement bundle! :-)")
-            logging.info(" - Assigned functions are: \n" + pprint.pformat(self.sdo_bidder.implementations))
+            logging.log(LoggingConfiguration.IMPORTANT, " - Sdo '" + self.sdo_name + " got enough resources ! :-)")
+            logging.log(LoggingConfiguration.IMPORTANT, " - Functions: \n{}".format(self.sdo_bidder.implementations))
         else:
-            logging.info(" - Sdo '" + self.sdo_name + " didn't get enough resources to implement bundle :-(")
+            logging.log(LoggingConfiguration.IMPORTANT, " - Sdo '" + self.sdo_name + " didn't get enough resources :-(")
         self.sdo_bidder.private_utility = self.sdo_bidder.get_service_utility()[0]
         print(self.sdo_name.ljust(5) +
               " | strong: " + str(strong_agreement).ljust(5) +

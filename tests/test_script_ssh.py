@@ -81,8 +81,31 @@ with open(configuration.RAP_INSTANCE, mode="r") as rap_file:
 sdos = ["sdo"+str(n) for n in range(configuration.SDO_NUMBER)]
 nodes = ["node" + str(n) for n in range(configuration.NODE_NUMBER)]
 
+# update problem instance according with configuration size
 rap.sdos = sdos
 rap.nodes = nodes
+
+rap.available_resources = dict()
+known_resources_units = {"cpu": 1, "memory": 512, "bandwidth": 256, "storage": 128}
+
+known_ones = 0
+if set(rap.resources) == {"cpu", "memory", "bandwidth"}:
+    rap.available_resources["node0"] = {"cpu": 16, "memory": 4096, "bandwidth": 2048}
+    if len(rap.nodes) > 1:
+        rap.available_resources["node1"] = {"cpu": 12, "memory": 4096, "bandwidth": 2048}
+    if len(rap.nodes) > 2:
+        rap.available_resources["node2"] = {"cpu": 12, "memory": 8192, "bandwidth": 4096}
+    if len(rap.nodes) > 3:
+        rap.available_resources["node3"] = {"cpu": 4, "memory": 2048, "bandwidth": 1024}
+    known_ones = 4
+
+for node in rap.nodes[known_ones:]:
+    node_resources = {resource: 2**(int(hashlib.sha256(str(node).encode()).hexdigest(), 16) % 5)
+                      * known_resources_units.get(resource, 1)
+                      for resource in rap.resources}
+    rap.available_resources[node] = node_resources
+
+
 with open(configuration.RAP_INSTANCE, mode="w") as rap_file:
     rap_file.write(json.dumps(rap.to_dict(), indent=4))
 

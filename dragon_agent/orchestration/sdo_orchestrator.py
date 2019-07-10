@@ -1,6 +1,8 @@
 import hashlib
 import logging
 import pprint
+import random
+
 import math
 from functools import reduce
 
@@ -51,6 +53,9 @@ class SdoOrchestrator:
         self.per_node_winners = {node: set() for node in self.rap.nodes}
         """ Winners sdos computed at the last iteration for each node """
 
+        self.assignment_dict = {node: dict() for node in self.rap.nodes}
+        """ Assignment for each node """
+
         self.per_node_max_bid_ratio = {node: sys.maxsize for node in self.rap.nodes}
         """ Last bids/demand placed for each nodes. Cannot be exceeded during each rebidding """
 
@@ -63,26 +68,40 @@ class SdoOrchestrator:
         self.detailed_implementations = list()
         """ If node is a winner, contains all the won implementation for each service of its bundle with utilities """
 
-    def multi_node_election(self, blacklisted_sdos=set()):
+    def multi_node_election(self, blacklisted_sdos=None, nodes=None):
         """
 
         :param set of str blacklisted_sdos:
+        :param set nodes:
         :return: winner_list, assignment_dict, lost_nodes
         """
 
-        logging.info("****** Start Election ******")
+        if blacklisted_sdos is None:
+            blacklisted_sdos = set()
+        if nodes is None:
+            nodes = self.rap.nodes
+        logging.log(LoggingConfiguration.IMPORTANT, "****** Start Election ******")
+        logging.log(LoggingConfiguration.VERBOSE, ": on nodes: " + str(nodes))
         logging.log(LoggingConfiguration.VERBOSE, ": blacklisted sdos: " + str(blacklisted_sdos))
-        winners = {node: set() for node in self.rap.nodes}
+
+        winners = {node: set() for node in nodes}
         lost_nodes = {sdo: set() for sdo in self.rap.sdos}
         bidded_nodes = {sdo: set() for sdo in self.rap.sdos}
 
-        # compute election for all nodes
         assignment_dict = dict()
+        # copy old winners for ignored nodes
         for node in self.rap.nodes:
+            if node not in nodes:
+                winners[node] = {sdo for sdo in self.per_node_winners[node] if sdo not in blacklisted_sdos}
+                assignment_dict[node] = self.assignment_dict[node]
+
+        # compute election for all nodes
+        for node in nodes:
             node_winner_list, node_assignment_dict = self.election(node, blacklisted_sdos)
             logging.debug(": node_winner_list: " + str(node_winner_list))
             winners[node] = node_winner_list
             assignment_dict[node] = node_assignment_dict
+            logging.log(LoggingConfiguration.IMPORTANT, "Election for node {}".format(node))
 
         # stores, for each sdo, lost nodes and bidded nodes
         for sdo in self.rap.sdos:
@@ -90,13 +109,14 @@ class SdoOrchestrator:
             lost_nodes[sdo] = {n for n in bidded_nodes[sdo] if sdo not in winners[n]}
 
         # check if, in some nodes, there are winner that lost for sure at least an other node
-        # in that case, remove them and repeate again the election
+        # in that case, remove them and repeat again the election
         false_winners = self._compute_false_winners(winners, bidded_nodes, lost_nodes)
         logging.debug("fake winners: " + str(false_winners))
         if len(false_winners) > 0:
             # recursion
             new_winners, assignment_dict, residual_lost_nodes = self.multi_node_election(set.union(blacklisted_sdos,
-                                                                                                   false_winners))
+                                                                                                   false_winners),
+                                                                                         nodes)
             for sdo in self.rap.sdos:
                 if sdo not in blacklisted_sdos:
                     if sdo not in false_winners:
@@ -106,12 +126,12 @@ class SdoOrchestrator:
         # Election completed
         logging.info(" WINNERS DICT: '" + pprint.pformat(winners))
         logging.info(" LOST NODES DICT: '" + pprint.pformat(lost_nodes))
-        logging.info("******* End Election *******")
+        logging.log(LoggingConfiguration.IMPORTANT, "******* End Election *******")
         return winners, assignment_dict, lost_nodes
 
     def _compute_false_winners(self, winners, bidded_nodes, lost_nodes):
         """
-        Fake winner definition: an sdo that won some nodes, but lost at least an other node against somebody that is
+        False winner definition: an sdo that won some nodes, but lost at least an other node against somebody that is
         not, in turn, an other fake winner.
         Ambiguous situation are solved given precedence to the higher bidder.
         Example:
@@ -122,8 +142,8 @@ class SdoOrchestrator:
         sdo0 needs n0 and n1, but lost n0 against sdo1. However, sdo1 is a "false winner". In fact, he needs n2, but he
         lost it against sdo2, that is not a "false winner" for sure, since he won all needed nodes.
         In absence of sdo2, both sdo0 and sdo1 may be fake winners. The precedence is given to the one with the higher
-        bid value between each nodes. So if sdo1 max bid is higher that the sdo0 one, in absence of sdo2, sdo0 will be
-        the fake winner.
+        bid value between each nodes. So if sdo1 max bid is higher than the sdo0 one, in absence of sdo2, sdo0 will be
+        the false winner.
 
         :param winners:
         :param bidded_nodes:
@@ -167,7 +187,7 @@ class SdoOrchestrator:
         return set(known_fakes)
 
     @staticmethod
-    def _find_false_winner(sdo, node, winners, max_bids, bidded_nodes, lost_nodes, known_falses, ignore=list()):
+    def _find_false_winner(sdo, node, winners, max_bids, bidded_nodes, lost_nodes, known_falses, ignore=None):
         """
         Search and return for an sdo against who the given sdo lost the given node, but that,
         recursively, lost for sure an other node against someone else.
@@ -181,6 +201,8 @@ class SdoOrchestrator:
         :param ignore: the recursion chain of sdos to ignore (avoid recursion loops)
         :return:
         """
+        if ignore is None:
+            ignore = list()
         found_falses = set()
         for w in sorted(winners[node], key=lambda x: max_bids[x]):
             # check if w is a fake winner
@@ -203,7 +225,7 @@ class SdoOrchestrator:
                         found_falses.update(other_falses)
         return None, found_falses
 
-    def election(self, node, blacklisted_sdos=set()):
+    def election(self, node, blacklisted_sdos=None):
         """
         Greedy approach to solve the knapsack problem:
         select winner sdo maximizing total vote and fitting node resources
@@ -212,6 +234,8 @@ class SdoOrchestrator:
         :return: list of winners, node assignment_dict
         """
 
+        if blacklisted_sdos is None:
+            blacklisted_sdos = set()
         logging.info("****** Election on node '" + node + "' ******")
         node_winners = set()
         node_residual_resources = dict(self.rap.available_resources[node])
@@ -290,7 +314,8 @@ class SdoOrchestrator:
             try:
                 desired_bid_bundle, impl = self._greedy_embedding(self.rap.available_resources, blacklisted_nodes)
             except SchedulingTimeout as ste:
-                logging.info("Scheduling Timeout: " + ste.message)
+                # logging.info("Scheduling Timeout: " + ste.message)
+                logging.log(LoggingConfiguration.IMPORTANT, "Scheduling Timeout: " + ste.message)
                 desired_bid_bundle = None
                 impl = list()
             logging.info("Desired bundle: " + pprint.pformat(desired_bid_bundle))
@@ -298,9 +323,11 @@ class SdoOrchestrator:
                 # release biddings
                 for node in self.rap.nodes:
                     self.bidding_data[node][self.sdo_name] = self.init_bid(time.time())
-                # compute election to discover residual resources
-                winners, assignment_dict, lost_nodes = self.multi_node_election()
-                self.per_node_winners = winners
+                # compute election to discover residual resources - EXPERIMENTAL: skip this election, data should be ok
+                # winners, assignment_dict, lost_nodes = self.multi_node_election()
+                # self.per_node_winners = winners
+                assignment_dict = self.assignment_dict
+                winners = self.per_node_winners
                 winners_set = set(itertools.chain(*self.per_node_winners.values()))
                 break
 
@@ -312,10 +339,11 @@ class SdoOrchestrator:
             for node in assignment:
                 self.bidding_data[node][self.sdo_name] = assignment[node][self.sdo_name]
             # compute election
-            winners, assignment_dict, lost_nodes = self.multi_node_election()
+            winners, assignment_dict, lost_nodes = self.multi_node_election(nodes=set(assignment.keys()))
             # set new bid ratio bound
             self._update_bid_ratio_bound(winners, lost_nodes)
             self.per_node_winners = winners
+            self.assignment_dict = assignment_dict
             blacklisted_nodes.update(lost_nodes[self.sdo_name])
             # release the bidding on lost nodes
             for node in blacklisted_nodes:
@@ -369,6 +397,8 @@ class SdoOrchestrator:
                 for node in assignment:
                     self.bidding_data[node][self.sdo_name] = assignment[node][self.sdo_name]
                     self.per_node_winners[node].add(self.sdo_name)
+                    self.assignment_dict[node][self.sdo_name] = self.bidding_data[node][self.sdo_name]
+
                 self.implementations = lighter_implementation
                 self.detailed_implementations = impl
                 self.private_utility = self._private_utility_from_bid_bundle(lighter_bid_bundle)
@@ -403,19 +433,22 @@ class SdoOrchestrator:
                     min_bid_ratio -= sys.float_info.epsilon
                 self.per_node_max_bid_ratio[node] = min(self.per_node_max_bid_ratio[node], min_bid_ratio)
 
-    def _greedy_embedding(self, resource_bound, blacklisted_nodes=set()):
+    def _greedy_embedding(self, resource_bound, blacklisted_nodes=None):
         """
         Find the greedy-best solution fitting the given resources
         :param dict[str, dict[str, int]] resource_bound: for each node, resources that the solution must fit
         :param set of str blacklisted_nodes: those nodes will not be taken in account
         :return dict[str, dict[str, union[str, int]]]: the best optimization bid_bundle found
         """
+        if blacklisted_nodes is None:
+            blacklisted_nodes = set()
         begin_ts = time.time()
         current_bid_bundle = dict()
         """ { service_name: { function: function_name, node: node_name, utility: utility_value } } """
         current_utility = 0
         skip_vector = [0]*len(self.service_bundle)
         added_services = list()
+        next_ranked_services = list()
 
         while len(current_bid_bundle) < len(self.service_bundle):
             logging.debug(" - Current bundle: " + pprint.pformat(current_bid_bundle, compact=True))
@@ -424,10 +457,20 @@ class SdoOrchestrator:
             try:
                 # exclude nodes where bid is completed
                 completed_bid_nodes = self._get_completed_bid_nodes(current_bid_bundle)
+                if len(next_ranked_services) <= len(current_bid_bundle):
+                    next_ranked_services.insert(len(current_bid_bundle), self._get_next_ranked_services(
+                            current_bid_bundle, set.union(blacklisted_nodes, completed_bid_nodes)))
                 # get the best greedy
+                '''
                 s, f, n, mu = self._get_next_best_service(current_bid_bundle,
                                                           skip_vector[len(current_bid_bundle)],
                                                           set.union(blacklisted_nodes, completed_bid_nodes))
+                '''
+                try:
+                    s, f, n, mu = next_ranked_services[len(current_bid_bundle)][skip_vector[len(current_bid_bundle)]]
+                except IndexError:
+                    raise NoFunctionsLeft("No function left for this bundle")
+
                 logging.debug(" --- Found the next " + str(skip_vector[len(current_bid_bundle)]+1) +
                               "-best service: '" + s +
                               "' with function '" + f +
@@ -468,6 +511,7 @@ class SdoOrchestrator:
                 del current_bid_bundle[added_services[-1]]
                 added_services = added_services[:-1]
                 skip_vector[len(current_bid_bundle)] += 1
+                next_ranked_services = next_ranked_services[:-1]
 
         current_implementations = [(serv,
                                     current_bid_bundle[serv]["function"],
@@ -484,7 +528,7 @@ class SdoOrchestrator:
                               for k, v in current_bid_bundle.items()}
         return current_bid_bundle, current_implementations
 
-    def _patience_embedding(self, resource_bound, blacklisted_nodes=set()):
+    def _patience_embedding(self, resource_bound, blacklisted_nodes=None):
         """
         Find the patience-best solution fitting the given resources.
         Patience algorithm starts from a lower bound solution and try to substitute function one-by-one
@@ -493,6 +537,8 @@ class SdoOrchestrator:
         :param set of str blacklisted_nodes: those nodes will not be taken in account
         :return dict[str, dict[str, union[str, int]]]: the best optimization bid_bundle found
         """
+        if blacklisted_nodes is None:
+            blacklisted_nodes = set()
         begin_ts = time.time()
         current_bid_bundle = dict()
         """ { service_name: { function: function_name, node: node_name, utility: utility_value } } """
@@ -604,7 +650,7 @@ class SdoOrchestrator:
 
         return current_bid_bundle, current_implementations
 
-    def _get_next_best_service(self, bid_bundle, skip_first=0, blacklisted_nodes=set()):
+    def _get_next_best_service(self, bid_bundle, skip_first=0, blacklisted_nodes=None):
         """
 
         :param bid_bundle:
@@ -613,6 +659,8 @@ class SdoOrchestrator:
         :raises NoFunctionsLeft: when is requested to skip mor services/functions than the available
         :return (str, str, str, float): service, function, node, marginal utility
         """
+        if blacklisted_nodes is None:
+            blacklisted_nodes = set()
         utility_list = list()
 
         for service in self.service_bundle:
@@ -628,8 +676,31 @@ class SdoOrchestrator:
                                                                           reverse=True)[skip_first]
         return best_service, best_function, best_node, marginal_utility
 
-    def _get_next_lighter_service(self, bid_bundle, consumptions_iterator, skip_services=set(),
-                                  blacklisted_nodes=set(), resource_bound=None):
+    def _get_next_ranked_services(self, bid_bundle, blacklisted_nodes=None):
+        """
+
+        :param bid_bundle:
+        :param set of str blacklisted_nodes: those nodes will not be taken in account
+        :raises NoFunctionsLeft: when is requested to skip mor services/functions than the available
+        :return list of (str, str, str, float): service, function, node, marginal utility
+        """
+        if blacklisted_nodes is None:
+            blacklisted_nodes = set()
+        utility_list = list()
+
+        for service in self.service_bundle:
+            if service not in bid_bundle:
+                ranked_functions = self._rank_function_for_service(bid_bundle, service, blacklisted_nodes, 4)
+                for function, node in ranked_functions:
+                    utility_gain = ranked_functions[(function, node)]
+                    utility_list.append((service, function, node, utility_gain))
+
+        if len(utility_list) == 0:
+            raise NoFunctionsLeft("No function left for this bundle")
+        return sorted(utility_list, key=lambda x: x[3], reverse=True)
+
+    def _get_next_lighter_service(self, bid_bundle, consumptions_iterator, skip_services=None,
+                                  blacklisted_nodes=None, resource_bound=None):
         """
 
         :param bid_bundle:
@@ -639,6 +710,10 @@ class SdoOrchestrator:
         :return:
         """
 
+        if skip_services is None:
+            skip_services = set()
+        if blacklisted_nodes is None:
+            blacklisted_nodes = set()
         lighter_function = (None, None, None, None)
         lighter_consumption = sys.maxsize
 
@@ -680,21 +755,34 @@ class SdoOrchestrator:
                     best_marginal_utility = marginal_utility
         return best_function, best_node, best_marginal_utility
 
-    def _rank_function_for_service(self, bid_bundle, service, blacklisted_nodes=set()):
+    def _rank_function_for_service(self, bid_bundle, service, blacklisted_nodes=None, nodes_limit=None):
         """
         Returns a set of possible function:node implementing the given service together with the marginal gain
         :param bid_bundle:
         :param service:
         :param blacklisted_nodes: those nodes will not be taken in account
+        :param nodes_limit: takes into account only a limited number of nodes
         :type bid_bundle: dict
         :type service: str
         :type blacklisted_nodes: set of str
+        :type nodes_limit: int
         :return dict[(str, str), float]: dict of (function, node), marginal utility
         """
         # search for functions
+        if blacklisted_nodes is None:
+            blacklisted_nodes = set()
         ranked_functions = dict()
+        nodes = [node for node in self.rap.nodes if node not in blacklisted_nodes]
+
+        if nodes_limit is not None:
+            # rearrange list to start from a pseudo-random node for this sdo
+            random.seed(self.sdo_name)
+            start_index = random.randrange(0, len(self.rap.nodes))
+            nodes = nodes[start_index:] + nodes[:start_index]
+            nodes = nodes[:nodes_limit]
+
         for function in self.rap.get_implementations_for_service(service.split('_', 1)[-1]):
-            for node in [node for node in self.rap.nodes if node not in blacklisted_nodes]:
+            for node in nodes:
                 marginal_utility = self._marginal_utility(bid_bundle, service, function, node)
                 ranked_functions[(function, node)] = marginal_utility
         return ranked_functions
@@ -1560,3 +1648,4 @@ class SdoOrchestrator:
         for node in bidding_data:
             if bidding_data[node][self.sdo_name] != 0:
                 self.bidding_data[node][self.sdo_name] = self.init_bid(time.time())
+                self.assignment_dict[node][self.sdo_name] = self.init_bid(time.time())  # is this needed?

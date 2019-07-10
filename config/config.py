@@ -24,7 +24,7 @@ class Configuration(object, metaclass=Singleton):
             self.AGREEMENT_TIMEOUT = config.getint('timeout', 'agreement_timeout')
             self.WEAK_AGREEMENT_TIMEOUT = config.getint('timeout', 'weak_agreement_timeout')
             self.ASYNC_TIMEOUT = config.getfloat('timeout', 'async_timeout')
-            self.SCHEDULING_TIME_LIMIT = config.getint('timeout', 'scheduling_time_limit')
+            self.SCHEDULING_TIME_LIMIT = config.getfloat('timeout', 'scheduling_time_limit')
             self.SAMPLE_FREQUENCY = config.getfloat('timeout', 'sample_frequency')
 
             # [neighborhood]
