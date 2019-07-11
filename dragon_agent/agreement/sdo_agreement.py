@@ -1,6 +1,5 @@
 import hashlib
 import logging
-import pprint
 
 import time
 
@@ -32,7 +31,8 @@ class SdoAgreement:
         self.rebroadcast = False
         self.agreement = False
         self.updated = False
-        self.per_sdo_agreement = set()
+        #self.per_sdo_agreement = set()
+        self.agree_neighbors = set()
         self._pending_rebid = False
 
     def sdo_multi_agreement(self, received_data, rebid_enabled=True):
@@ -53,7 +53,10 @@ class SdoAgreement:
         self.agreement = True
         self.updated = False
         self.rebroadcast = False
-        self.per_sdo_agreement = set()
+        #self.per_sdo_agreement = set()
+        old_per_sdo_agreement = set(self.agree_neighbors)
+        #self.agree_neighbors = {node for node in self.agree_neighbors if node not in received_data}
+        self.agree_neighbors = set()
 
         changed_nodes = set()
 
@@ -120,19 +123,22 @@ class SdoAgreement:
             self.agreement = False
             self.updated = True
             logging.log(LoggingConfiguration.IMPORTANT, "---------------- END AGREEMENT ----------------")
-            return  # if sdo rebidded, we already completed the agreement phase for all nodes
+            return  # if sdo re-bid, we need to rebroadcast so there is no agreement to check
+
+        send_list = list()
 
         for sender in received_data.keys():
 
             logging.info("Checking agreement with sdo '" + sender + "'")
-            self.per_sdo_agreement.add(sender)
+            self.agree_neighbors.add(sender)
 
             # check if the received message changed the situation
             for node in self.rap.nodes:
 
-                logging.info("Loc winners: " + str(sorted(current_winners[node])))
-                logging.info("Rec winners: " + str(sorted(received_data[sender]['winners'][node])))
-                logging.info("New winners: " + str(sorted(self.sdo_bidder.per_node_winners[node])))
+                logging.info(" - Checking data for node '{}'...".format(node))
+                logging.info(" - Loc winners: " + str(sorted(current_winners[node])))
+                logging.info(" - Rec winners: " + str(sorted(received_data[sender]['winners'][node])))
+                logging.info(" - New winners: " + str(sorted(self.sdo_bidder.per_node_winners[node])))
 
                 current_winners_digest = hashlib.sha256(str(sorted(current_winners[node])).encode()).hexdigest()
                 rcvd_winners_digest = hashlib.sha256(
@@ -212,27 +218,32 @@ class SdoAgreement:
                         agreement_on_node = True
                     self.rebroadcast = True
                     self.updated = True
-                elif current_winners_digest == new_winners_digest:  # winners remains the same
+                elif current_winners_digest == new_winners_digest:
+                    # winners remains the same
                     logging.info("New winners are same of current but not received")
                     if self.sdo_name in self.sdo_bidder.per_node_winners[node]:
                         if self.sdo_name not in received_data[sender]['winners'][node]:
                             # update-time & rebroadcast
                             logging.info("UPDATE-TIME & REBROADCAST")
-                            # self._update_time(node)
-                            self.rebroadcast = True
+                            # self._update_time(node)   # ?? check if update time is really needed
+                            self.rebroadcast = True     # send only to this node?
+                            # send_list.append(sender)  # <- this one seems to slow down
                         else:
                             # update & rebroadcast
                             logging.info("LEAVE & REBROADCAST")
-                            self.rebroadcast = True
+                            # self.rebroadcast = True     # send only to this node?
+                            send_list.append(sender)
                     elif self._compare_bid_times(self.sdo_bidder.bidding_data[node], current_bidding_data[node]) > 0:
                         # received new ts
                         # update & no-rebroadcast
-                        logging.info("UPDATE & REBROADCAST")
-                        self.rebroadcast = True
+                        logging.info("UPDATE & NO-REBROADCAST")
+                        # self.updated = True
+                        # self.rebroadcast = True  # ------ ??????
                     else:
                         # leave & rebroadcast
                         logging.info("LEAVE & REBROADCAST")
-                        self.rebroadcast = True
+                        self.rebroadcast = True     # send only to this node?
+                        # send_list.append(sender)  # <- this one seems to slow down
                 else:  # new data different
                     # update & rebroadcast
                     logging.info("UPDATE & REBROADCAST")
@@ -241,11 +252,22 @@ class SdoAgreement:
 
                 if not agreement_on_node:
                     self.agreement = False
-                    self.per_sdo_agreement.discard(sender)
-                logging.info("Agreement for node: " + str(agreement_on_node))
+                    self.agree_neighbors.discard(sender)
+                logging.info("Agreement on node: " + str(agreement_on_node))
             # repeat for each node. --)
-            logging.info("Agreement with sdo '" + sender + "':" + str(sender in self.per_sdo_agreement))
+
+            logging.info("Agreement with sdo '" + sender + "':" + str(sender in self.agree_neighbors))
+
+            '''
+            # EXPERIMENTAL (is this just sending more messages when not needed? - we use it in drone)
+            if sender in self.agree_neighbors and sender not in old_per_sdo_agreement:
+                logging.log(LoggingConfiguration.VERBOSE, "The agreement with this neighbor is new.")
+                # self.rebroadcast = True   # send only to this node?
+                send_list.append(sender)
+            '''
+
         logging.log(LoggingConfiguration.IMPORTANT, "---------------- END AGREEMENT ----------------")
+        return send_list
 
     def sdo_agreement(self, received_winners, received_bidding_data, sender, rebid_enabled=True):
         """
@@ -266,8 +288,8 @@ class SdoAgreement:
         current_winners = dict(self.sdo_bidder.per_node_winners)
 
         logging.info("Received data from '" + sender + "'")
-        logging.log(LoggingConfiguration.VERBOSE, "Local data: " + pprint.pformat(current_bidding_data))
-        logging.log(LoggingConfiguration.VERBOSE, "Received data: " + pprint.pformat(received_bidding_data))
+        # logging.log(LoggingConfiguration.VERBOSE, "Local data: " + pprint.pformat(current_bidding_data))
+        # logging.log(LoggingConfiguration.VERBOSE, "Received data: " + pprint.pformat(received_bidding_data))
 
         overbid = False
         self.agreement = True

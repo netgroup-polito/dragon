@@ -7,8 +7,11 @@ import json
 import pprint
 import shutil
 import os
+import time
 import zipfile
 # import threading
+import socket
+
 import paramiko
 import itertools
 
@@ -46,22 +49,27 @@ def remote_sdo_worker(_host_index, _sdo_name, _services, _log_level, _conf_file)
     _ssh.connect(remote_hosts[_host_index], username=remote_username)
     # time.sleep(3)
 
-    _stdin, _stdout, _stderr = _ssh.exec_command("cd {}".format(remote_dragon_path) + "; "
-                                                 "python3 main.py {} {} -l {} -d {} -o".format(_sdo_name,
-                                                                                               " ".join(_services),
-                                                                                               _log_level,
-                                                                                               _conf_file),
-                                                 get_pty=True)
-    _exit_status = stdout.channel.recv_exit_status()
+    try:
+        _stdin, _stdout, _stderr = _ssh.exec_command("cd {}".format(remote_dragon_path) + "; "
+                                                     "python3 main.py {} {} -l {} -d {} -o".format(_sdo_name,
+                                                                                                   " ".join(_services),
+                                                                                                   _log_level,
+                                                                                                   _conf_file),
+                                                     get_pty=True, timeout=50)
+        _exit_status = stdout.channel.recv_exit_status()
 
-    lines = _stdout.readlines()
-    for line in lines:
-        print(line)
-    lines = _stderr.readlines()
-    for line in lines:
-        print(line, file=sys.stderr)
+        lines = _stdout.readlines()
+        for line in lines:
+            print(line)
+        lines = _stderr.readlines()
+        for line in lines:
+            print(line, file=sys.stderr)
+    except socket.timeout:
+        _ssh.close()
+        exit(1)
 
     _ssh.close()
+    exit(0)
 
 
 ssh_clients = dict()
@@ -194,13 +202,22 @@ for i in range(configuration.SDO_NUMBER):
     p_list.append(t)
 
 killed = list()
+timeout = 100
+step_time = time.time()
 for i, t in enumerate(p_list):
     try:
-        t.join(timeout=50)
+        t.join(timeout=timeout)
+        if t.exitcode == 1:
+            print("WARNING: Forced agent '{}' to terminate. Possible incomplete output".format(rap.sdos[i]))
+            killed.append('sdo' + str(i))
     except TimeoutExpired:
         t.terminate()
-        print("WARNING: Possible incomplete output")
+        print("WARNING: Forcing agent '{}' to terminate. Possible incomplete output".format(rap.sdos[i]))
         killed.append('sdo' + str(i))
+    new_step_time = time.time()
+    timeout -= new_step_time - step_time
+    step_time = new_step_time
+    timeout = max(timeout, 1)
 
 print(" - Collect Results - ")
 
@@ -241,22 +258,28 @@ shutil.rmtree(result_tmp_folder)
 placements = dict()
 message_rates = dict()
 private_utilities = list()
+sent_messages = dict()
+last_update_times = list()
 for i in range(configuration.SDO_NUMBER):
     sdo_name = "sdo" + str(i)
     results_file = configuration.RESULTS_FOLDER + "/results_" + sdo_name + ".json"
 
     if sdo_name in killed:
         private_utilities.append(0)
+        last_update_times.append(0)
         placements[sdo_name] = []
-        message_rates[sdo_name] = OrderedDict([("0:0", 0)])
+        # message_rates[sdo_name] = OrderedDict([("0:0", 0)])
+        sent_messages[sdo_name] = 0
         continue
 
     try:
         with open(results_file) as f:
             results = json.loads(f.read())
             private_utilities.append(results["utility"])
+            last_update_times.append(results["last-update"])
             placements[sdo_name] = results["placement"]
             message_rates[sdo_name] = OrderedDict(results["rates"])
+            sent_messages[sdo_name] = results["messages"]
     except FileNotFoundError:
         continue
 
@@ -303,6 +326,9 @@ while len(message_rates) > 0:
 
 # print message rates
 print("Message rates: \n" + pprint.pformat(global_rates))
+print("Total messages sent: {}".format(sum(list(sent_messages.values()))))
+print("Last update on {0:.3f}".format(max(last_update_times)))
+print("Timeout on: {}".format(killed))
 
 '''
 # purge rabbitmq queues

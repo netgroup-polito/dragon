@@ -48,7 +48,7 @@ def cluster_topology(n_clusters, n_edges, edges_prefix):
 
 if __name__ == "__main__":
 
-    t_dict = cluster_topology(3, 200, "sdo")
+    t_dict = cluster_topology(5, 200, "sdo")
     # print(t_dict)
     with open("topology_cluster.json", mode="w") as t_file:
         json.dump(t_dict, t_file)

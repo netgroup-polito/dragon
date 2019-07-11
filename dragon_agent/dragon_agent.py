@@ -1,5 +1,4 @@
 import logging
-import pprint
 import time
 from collections import OrderedDict
 
@@ -79,7 +78,7 @@ class SDONode:
 
         # first bidding
         self.sdo_bidder.sdo_orchestrate()
-        logging.info(pprint.pformat(self.sdo_bidder.bidding_data))
+        logging.info(self.sdo_bidder.bidding_data)
 
         # broadcast first bidding data
         # self.broadcast()
@@ -221,11 +220,13 @@ class SDONode:
         # [ agreement process for these messages ]
         logging.log(LoggingConfiguration.IMPORTANT, "Handling messages from '" + ",".join([m.sender for m in messages]) + "'")
         data = {m.sender: {'bidding-data': m.bidding_data, 'winners': m.winners} for m in messages}
-        self.sdo_agreement.sdo_multi_agreement(data)
+        send_list = self.sdo_agreement.sdo_multi_agreement(data)
 
         # [ rebroadcast ]
         if self.sdo_agreement.rebroadcast:
             self.broadcast()
+        elif send_list:
+            self.broadcast(send_list)
         else:
             logging.info("No need to rebroadcast bidding information.")
 
@@ -240,8 +241,8 @@ class SDONode:
                 # delete timeout if any
                 self._messaging.del_stop_timeout()
         for message in messages:
-            if message.sender in self.sdo_agreement.per_sdo_agreement:
-                # NEIGHBOR AGREEMENT - data that neighbor sent are consistent with local
+            if message.sender in self.sdo_agreement.agree_neighbors:
+                # NEIGHBOR AGREEMENT - data that neighbor sent is consistent with local
                 logging.log(LoggingConfiguration.IMPORTANT, "Agreement reached with neighbor '" + message.sender + "'")
                 prev_len = len(self.agree_neighbors)
                 self.agree_neighbors.add(message.sender)
@@ -321,9 +322,9 @@ class SDONode:
                 else:
                     logging.info("Confirmed last agreement")
 
-    def broadcast(self):
+    def broadcast(self, neighborhood=None):
         """
-
+        Send local bidding data to each neighbor.
         :return:
         """
         logging.info("Broadcasting bidding information ...")
@@ -334,15 +335,16 @@ class SDONode:
                                               bidding_data=self.sdo_bidder.bidding_data)
 
         # get the neighbors list
-        neighborhood = self.neighborhood_detector.get_current_neighborhood()
+        if neighborhood is None:
+            neighborhood = self.neighborhood_detector.get_current_neighborhood()
 
         # time.sleep(0.06)
 
         for neighbor in neighborhood:
             logging.info("Sending message to neighbor '" + neighbor + "' ...")
             self.send_bid_message(neighbor, message_to_broadcast)
-            logging.info("Message has been sent.")
             self.message_counter += 1
+            logging.info("Message has been sent.")
 
         # store rate for validation
         timestamp = time.time()

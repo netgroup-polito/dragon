@@ -1,6 +1,5 @@
 import hashlib
 import logging
-import pprint
 import random
 
 import math
@@ -124,8 +123,8 @@ class SdoOrchestrator:
             return new_winners, assignment_dict, lost_nodes
 
         # Election completed
-        logging.info(" WINNERS DICT: '" + pprint.pformat(winners))
-        logging.info(" LOST NODES DICT: '" + pprint.pformat(lost_nodes))
+        logging.info(" WINNERS DICT: '{}'".format(winners))
+        logging.info(" LOST NODES DICT: '{}'".format(lost_nodes))
         logging.log(LoggingConfiguration.IMPORTANT, "******* End Election *******")
         return winners, assignment_dict, lost_nodes
 
@@ -240,7 +239,7 @@ class SdoOrchestrator:
         node_winners = set()
         node_residual_resources = dict(self.rap.available_resources[node])
         node_assignment_dict = {sdo: dict() for sdo in self.rap.sdos}
-        logging.info("Voting data: " + pprint.pformat(self.bidding_data[node], compact=True))
+        logging.info("Voting data: {}".format(self.bidding_data[node], compact=True))
         while True:
             logging.debug(" - Search for best voter to add ...")
             best_bid_demand_ratio = 0
@@ -284,7 +283,7 @@ class SdoOrchestrator:
                 logging.debug(" - No winner found, election terminated.'")
                 break
 
-        logging.info(" NODE " + node + " | WINNER LIST: " + pprint.pformat(node_winners))
+        logging.info(" NODE {} | WINNER LIST: {}".format(node, node_winners))
         logging.info("******* End Election *******")
         return node_winners, node_assignment_dict
 
@@ -295,7 +294,7 @@ class SdoOrchestrator:
         :return:
         """
 
-        logging.info("------------ Starting orchestration process -------------")
+        logging.log(LoggingConfiguration.IMPORTANT, "------------ Starting orchestration process -------------")
         # 1. Build, greedy, the best function vector (max total BID), that also is infrastructure-bounded
         winners = {node: set() for node in self.rap.nodes}
         assignment_dict = None
@@ -318,7 +317,7 @@ class SdoOrchestrator:
                 logging.log(LoggingConfiguration.IMPORTANT, "Scheduling Timeout: " + ste.message)
                 desired_bid_bundle = None
                 impl = list()
-            logging.info("Desired bundle: " + pprint.pformat(desired_bid_bundle))
+            logging.info("Desired bundle: {}".format(desired_bid_bundle))
             if desired_bid_bundle is None:
                 # release biddings
                 for node in self.rap.nodes:
@@ -350,8 +349,8 @@ class SdoOrchestrator:
                 self.bidding_data[node][self.sdo_name] = self.init_bid(time.time())
             winners_set = self.get_winners()
 
-        logging.info(" --- Winners dict: " + pprint.pformat(winners, compact=True))
-        logging.info(" --- Assignment dict: " + pprint.pformat(assignment_dict))
+        logging.info(" --- Winners dict: {}".format(winners))
+        logging.info(" --- Assignment dict: {}".format(assignment_dict))
         if self.sdo_name in winners_set:
             # we found the new bids for this sdo
             logging.info(" --- Sdo is a strong winner!!!")
@@ -361,7 +360,6 @@ class SdoOrchestrator:
         else:
             # 3. If not, repeat bid but just into the residual capacity
             logging.info(" --- Sdo lost election, checking for a less expensive solution ...")
-
             for node in self.rap.nodes:
                 if self.sdo_name in self.per_node_winners[node]:
                     # remove from winners
@@ -379,7 +377,7 @@ class SdoOrchestrator:
             self.implementations = list()
             self.detailed_implementations = list()
             residual_resources = self.rap.get_residual_resources(assignment_dict)
-            logging.info(" ----- Residual resources: " + pprint.pformat(residual_resources))
+            logging.info(" ----- Residual resources: {}".format(residual_resources))
             logging.info("Search for lighter bundle ...")
             try:
                 lighter_bid_bundle, impl = self._patience_embedding(residual_resources)
@@ -387,7 +385,7 @@ class SdoOrchestrator:
                 logging.info("Scheduling Timeout: " + ste.message)
                 lighter_bid_bundle = None
                 impl = list()
-            logging.info("Lighter bundle: " + pprint.pformat(lighter_bid_bundle))
+            logging.info("Lighter bundle: {}".format(lighter_bid_bundle))
             if lighter_bid_bundle is None:
                 logging.info(" ----- There are no solutions fitting the remaining space.")
             else:
@@ -410,9 +408,9 @@ class SdoOrchestrator:
                     self.per_node_max_bid_ratio[node] = self.bidding_data[node][self.sdo_name]['bid'] / self.rap.norm(
                                                             node, self.bidding_data[node][self.sdo_name]['consumption'])
 
-        logging.info("Sdo final voting: " + pprint.pformat({node: self.bidding_data[node][self.sdo_name]
-                                                            for node in self.rap.nodes}))
-        logging.info("------------ End of orchestration process -------------")
+        logging.info("Sdo final voting: {}".format({node: self.bidding_data[node][self.sdo_name]
+                                                    for node in self.rap.nodes}))
+        logging.log(LoggingConfiguration.IMPORTANT, "------------ End of orchestration process -------------")
 
     def _update_bid_ratio_bound(self, winners, lost_nodes):
         """
@@ -451,8 +449,8 @@ class SdoOrchestrator:
         next_ranked_services = list()
 
         while len(current_bid_bundle) < len(self.service_bundle):
-            logging.debug(" - Current bundle: " + pprint.pformat(current_bid_bundle, compact=True))
-            logging.debug(" - Skip vector: " + pprint.pformat(skip_vector, compact=True))
+            logging.debug(" - Current bundle: {}".format(current_bid_bundle, compact=True))
+            logging.debug(" - Skip vector: {}".format(skip_vector, compact=True))
             logging.debug(" - Searching for service to add at index: " + str(len(current_bid_bundle)))
             try:
                 # exclude nodes where bid is completed
@@ -547,8 +545,8 @@ class SdoOrchestrator:
         added_services = list()
         consumption_iterator = {s: 0 for s in self.service_bundle}
         while len(current_bid_bundle) < len(self.service_bundle):
-            logging.debug(" - Current bundle: " + pprint.pformat(current_bid_bundle, compact=True))
-            logging.debug(" - Skip vector: " + pprint.pformat(skip_vector, compact=True))
+            logging.debug(" - Current bundle: {}".format(current_bid_bundle, compact=True))
+            logging.debug(" - Skip vector: {}".format(skip_vector, compact=True))
             logging.debug(" - Searching for service to add at index: " + str(len(current_bid_bundle)))
             # exclude nodes where bid is completed
             completed_bid_nodes = self._get_completed_bid_nodes(current_bid_bundle)
@@ -847,8 +845,8 @@ class SdoOrchestrator:
         taken_services = list(taken_services)[1:]
         taken_functions = list(taken_functions)[1:]
 
-        logging.debug("Services in bundle: " + pprint.pformat(taken_services))
-        logging.debug("Functions in bundle: " + pprint.pformat(taken_functions))
+        logging.debug("Services in bundle: {}".format(taken_services))
+        logging.debug("Functions in bundle: {}".format(taken_functions))
 
         # Average consumption of first function of the bundle bounds all the utilities
         first_function_consumption = self._get_function_average_consumption((taken_functions + [function])[0])
@@ -859,7 +857,7 @@ class SdoOrchestrator:
         if submodular:
             # bounds
             bounds = [((len(self.service_bundle)-x)/len(self.service_bundle)) for x in range(len(taken_services)+2)]
-            logging.debug("Bounds: " + pprint.pformat(bounds))
+            logging.debug("Bounds: {}".format(bounds))
 
             # apply a transformation to the bounds (transformation remains the same for previous bound)
             taken_services.append(service)
@@ -872,9 +870,9 @@ class SdoOrchestrator:
                 if index > 0:
                     transformed_bound = transformed_bound*transformed_bounds[index-1]
                 transformed_bounds.append(transformed_bound)
-            logging.debug("Transformed bounds: " + pprint.pformat(transformed_bounds))
+            logging.debug("Transformed bounds: {}".format(transformed_bounds))
             transformed_bounds = [int(x*100) for x in transformed_bounds]
-            logging.debug("Final bounds: " + pprint.pformat(transformed_bounds))
+            logging.debug("Final bounds: ".format(transformed_bounds))
 
             # range
             inf = transformed_bounds[-1]
@@ -1011,8 +1009,8 @@ class SdoOrchestrator:
         taken_services = list(taken_services)[1:]
         taken_functions = list(taken_functions)[1:]
 
-        logging.debug("Services in bundle: " + pprint.pformat(taken_services))
-        logging.debug("Functions in bundle: " + pprint.pformat(taken_functions))
+        logging.debug("Services in bundle: {}".format(taken_services))
+        logging.debug("Functions in bundle: {}".format(taken_functions))
 
         # Average consumption of first function of the bundle bounds all the utilities
         first_function_consumption = self._get_function_average_consumption((taken_functions + [function])[0])
@@ -1023,7 +1021,7 @@ class SdoOrchestrator:
         if submodular:
             # bounds
             bounds = [((len(self.service_bundle)-x)/len(self.service_bundle)) for x in range(len(taken_services)+2)]
-            logging.debug("Bounds: " + pprint.pformat(bounds))
+            logging.debug("Bounds: {}".format(bounds))
 
             # apply a transformation to the bounds (transformation remains the same for previous bound)
             taken_services.append(service)
@@ -1036,9 +1034,9 @@ class SdoOrchestrator:
                 if index > 0:
                     transformed_bound = transformed_bound*transformed_bounds[index-1]
                 transformed_bounds.append(transformed_bound)
-            logging.debug("Transformed bounds: " + pprint.pformat(transformed_bounds))
+            logging.debug("Transformed bounds: {}".format(transformed_bounds))
             transformed_bounds = [int(x*100) for x in transformed_bounds]
-            logging.debug("Final bounds: " + pprint.pformat(transformed_bounds))
+            logging.debug("Final bounds: {}".format(transformed_bounds))
 
             # range
             inf = transformed_bounds[-1]
@@ -1111,8 +1109,8 @@ class SdoOrchestrator:
         taken_services = list(taken_services)[1:]
         taken_functions = list(taken_functions)[1:]
 
-        logging.debug("Services in bundle: " + pprint.pformat(taken_services))
-        logging.debug("Functions in bundle: " + pprint.pformat(taken_functions))
+        logging.debug("Services in bundle: {}".format(taken_services))
+        logging.debug("Functions in bundle: {}".format(taken_functions))
 
         # Average consumption of first function of the bundle bounds all the utilities
         first_function_consumption = self._get_function_average_consumption((taken_functions + [function])[0])
@@ -1123,7 +1121,7 @@ class SdoOrchestrator:
         if submodular:
             # bounds
             bounds = [((len(self.service_bundle)-x)/len(self.service_bundle)) for x in range(len(taken_services)+2)]
-            logging.debug("Bounds: " + pprint.pformat(bounds))
+            logging.debug("Bounds: {}".format(bounds))
 
             # apply a transformation to the bounds (transformation remains the same for previous bound)
             taken_services.append(service)
@@ -1136,9 +1134,9 @@ class SdoOrchestrator:
                 if index > 0:
                     transformed_bound = transformed_bound*transformed_bounds[index-1]
                 transformed_bounds.append(transformed_bound)
-            logging.debug("Transformed bounds: " + pprint.pformat(transformed_bounds))
+            logging.debug("Transformed bounds: {}".format(transformed_bounds))
             transformed_bounds = [int(x*100) for x in transformed_bounds]
-            logging.debug("Final bounds: " + pprint.pformat(transformed_bounds))
+            logging.debug("Final bounds: {}".format(transformed_bounds))
 
             # range
             inf = transformed_bounds[-1]
@@ -1210,8 +1208,8 @@ class SdoOrchestrator:
         taken_services = list(taken_services)[1:]
         taken_functions = list(taken_functions)[1:]
 
-        logging.debug("Services in bundle: " + pprint.pformat(taken_services))
-        logging.debug("Functions in bundle: " + pprint.pformat(taken_functions))
+        logging.debug("Services in bundle: ".format(taken_services))
+        logging.debug("Functions in bundle: ".format(taken_functions))
 
         # Average consumption of first function of the bundle bounds all the utilities
         first_function_consumption = self._get_function_average_consumption((taken_functions + [function])[0])
@@ -1222,7 +1220,7 @@ class SdoOrchestrator:
         if submodular:
             # bounds
             bounds = [((len(self.service_bundle)-x)/len(self.service_bundle)) for x in range(len(taken_services)+2)]
-            logging.debug("Bounds: " + pprint.pformat(bounds))
+            logging.debug("Bounds: {}".format(bounds))
 
             # apply a transformation to the bounds (transformation remains the same for previous bound)
             taken_services.append(service)
@@ -1235,9 +1233,9 @@ class SdoOrchestrator:
                 if index > 0:
                     transformed_bound = transformed_bound*transformed_bounds[index-1]
                 transformed_bounds.append(transformed_bound)
-            logging.debug("Transformed bounds: " + pprint.pformat(transformed_bounds))
+            logging.debug("Transformed bounds: {}".format(transformed_bounds))
             transformed_bounds = [int(x*100) for x in transformed_bounds]
-            logging.debug("Final bounds: " + pprint.pformat(transformed_bounds))
+            logging.debug("Final bounds: {}".format(transformed_bounds))
 
             # range
             inf = transformed_bounds[-1]
@@ -1309,8 +1307,8 @@ class SdoOrchestrator:
         taken_services = list(taken_services)[1:]
         taken_functions = list(taken_functions)[1:]
 
-        logging.debug("Services in bundle: " + pprint.pformat(taken_services))
-        logging.debug("Functions in bundle: " + pprint.pformat(taken_functions))
+        logging.debug("Services in bundle: {}".format(taken_services))
+        logging.debug("Functions in bundle: {}".format(taken_functions))
 
         # Average consumption of first function of the bundle bounds all the utilities
         first_function_consumption = self._get_function_average_consumption((taken_functions + [function])[0])
@@ -1321,7 +1319,7 @@ class SdoOrchestrator:
         if submodular:
             # bounds
             bounds = [((len(self.service_bundle)-x)/len(self.service_bundle)) for x in range(len(taken_services)+2)]
-            logging.debug("Bounds: " + pprint.pformat(bounds))
+            logging.debug("Bounds: {}".format(bounds))
 
             # apply a transformation to the bounds (transformation remains the same for previous bound)
             taken_services.append(service)
@@ -1334,9 +1332,9 @@ class SdoOrchestrator:
                 if index > 0:
                     transformed_bound = transformed_bound*transformed_bounds[index-1]
                 transformed_bounds.append(transformed_bound)
-            logging.debug("Transformed bounds: " + pprint.pformat(transformed_bounds))
+            logging.debug("Transformed bounds: {}".format(transformed_bounds))
             transformed_bounds = [int(x*100) for x in transformed_bounds]
-            logging.debug("Final bounds: " + pprint.pformat(transformed_bounds))
+            logging.debug("Final bounds: {}".format(transformed_bounds))
 
             # range
             inf = transformed_bounds[-1]
