@@ -31,7 +31,6 @@ class SdoAgreement:
         self.rebroadcast = False
         self.agreement = False
         self.updated = False
-        #self.per_sdo_agreement = set()
         self.agree_neighbors = set()
         self._pending_rebid = False
 
@@ -118,7 +117,7 @@ class SdoAgreement:
         # check sdos agreement
         if overbid:
             # update & rebroadcast
-            logging.log(LoggingConfiguration.IMPORTANT, "UPDATE & REBROADCAST")
+            logging.info("UPDATE & REBROADCAST")
             self.rebroadcast = True
             self.agreement = False
             self.updated = True

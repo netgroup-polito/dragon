@@ -4,6 +4,7 @@ import community
 import networkx as nx
 #import tests.utils.nxmetis.nxmetis as nxmetis
 import nxmetis
+import sys
 
 
 class Graph:
@@ -39,18 +40,30 @@ class Graph:
                 raise Exception("Too many clusters required")
 
             attempt = 0
+            best_clustering = None
+            best_len_difference = sys.maxsize
+
             while attempt < 10:
                 clustering = community.best_partition(self.graph, resolution=try_resolution)
                 if len(set(clustering.values())) == n_clusters:
-                    break
-                elif len(set(clustering.values())) < n_clusters or try_resolution > 1.1:
+                    clusters = [{node for node in clustering if clustering[node] == i} for i in range(n_clusters)]
+                    clusters_len = [len(c) for c in clusters]
+                    len_difference = max(clusters_len) - min(clusters_len)
+                    if len_difference < best_len_difference:
+                        best_clustering = clustering
+                        best_len_difference = len_difference
+                        if len_difference <= 1:
+                            break
+                if len(set(clustering.values())) < n_clusters or try_resolution > 1.1:
                     try_resolution = 0.0
                     attempt += 1
                 else:
                     try_resolution += 0.05
-                clustering = None
+            clustering = best_clustering
+
         if clustering is None:
             # emergency algorithm:
+            print("WARNING")
             options = nxmetis.MetisOptions()
             options.ptype = 1
             options.objtype = 1
