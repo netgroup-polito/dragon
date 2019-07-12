@@ -89,9 +89,6 @@ with open(configuration.RAP_INSTANCE, mode="r") as rap_file:
 sdos = ["sdo"+str(n) for n in range(configuration.SDO_NUMBER)]
 nodes = ["node" + str(n) for n in range(configuration.NODE_NUMBER)]
 
-sdos.remove("sdo2")
-sdos.append("ciccio")
-
 # update problem instance according with configuration size
 rap.sdos = sdos
 rap.nodes = nodes
