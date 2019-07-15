@@ -20,7 +20,7 @@ class ResourceAllocationProblem:
         :param available_resources: for eache node n, stores the total amount of each resource k available
         :param implementation: dict that lists, for each service, all possible functions that can implement it
 
-        :type sdos: list of str
+        :type sdos: set of str
         :type services: list of str
         :type functions: list of str
         :type resources: list of str
@@ -314,9 +314,12 @@ class ResourceAllocationProblem:
         quadratic_values = list()
         for resource in self.resources:
 
-            consumption = resources[resource]*self.resource_scalar(resource, node)
-            quadratic_value = consumption**2
-            quadratic_values.append(quadratic_value)
+            try:
+                consumption = resources[resource]*self.resource_scalar(resource, node)
+                quadratic_value = consumption**2
+                quadratic_values.append(quadratic_value)
+            except ZeroDivisionError:
+                return sys.maxsize
 
         weighted_quadratic_norm = math.sqrt(sum(quadratic_values))
         return weighted_quadratic_norm
