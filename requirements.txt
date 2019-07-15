@@ -1,5 +1,7 @@
+python-louvain
 networkx==2.2
 community==1.0.0b1
+python-louvain
 paramiko==2.4.2
 scp
 pika==0.12.0

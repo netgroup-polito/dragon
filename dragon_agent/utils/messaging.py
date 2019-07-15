@@ -10,6 +10,7 @@ from dragon_agent.utils.singleton import Singleton
 
 from config.config import Configuration
 
+
 class Messaging(object, metaclass=Singleton):
     """
     This class manage exchange of messages with the neighborhood through rabbitmq.
@@ -74,12 +75,10 @@ class Messaging(object, metaclass=Singleton):
         """
         # logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
         if permanent:
-            self._permanent_timeout_id = self._connection.add_timeout(
-                timeout, self.stop_consuming)
+            self._permanent_timeout_id = self._connection.add_timeout(timeout, self.stop_consuming)
             self._permanent_timeout = timeout
         elif self._timeout_id is None:
-            self._timeout_id = self._connection.add_timeout(
-                timeout, self.stop_consuming)
+            self._timeout_id = self._connection.add_timeout(timeout, self.stop_consuming)
 
     def del_stop_timeout(self):
         """
@@ -221,8 +220,7 @@ class Messaging(object, metaclass=Singleton):
         """
         logging.log(15, " [x] Received " + body.decode())
         self = Messaging()
-        self._permanent_timeout_id = self._refresh_timeout(
-            self._permanent_timeout_id, self._permanent_timeout)
+        self._permanent_timeout_id = self._refresh_timeout(self._permanent_timeout_id, self._permanent_timeout)
 
         message = BiddingMessage()
         message.parse_dict(json.loads(body.decode()))

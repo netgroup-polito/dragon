@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-import community
+from community import community_louvain
 import networkx as nx
 #import tests.utils.nxmetis.nxmetis as nxmetis
 import nxmetis
@@ -30,7 +30,9 @@ class Graph:
             self.graph.add_nodes_from(self.topology.keys())
 
     def compute_clusters(self, n_clusters):
-        clustering = None
+        if len(self.topology) == 0:
+            return dict()
+
         if n_clusters == 1:
             clustering = {node: 0 for node in self.graph.nodes()}
         else:
@@ -44,7 +46,7 @@ class Graph:
             best_len_difference = sys.maxsize
 
             while attempt < 10:
-                clustering = community.best_partition(self.graph, resolution=try_resolution)
+                clustering = community_louvain.best_partition(self.graph, resolution=try_resolution)
                 if len(set(clustering.values())) == n_clusters:
                     clusters = [{node for node in clustering if clustering[node] == i} for i in range(n_clusters)]
                     clusters_len = [len(c) for c in clusters]
