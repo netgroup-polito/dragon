@@ -100,7 +100,8 @@ if __name__ == "__main__":
                "rates": list(rates.items()),
                "utility": int(sdo_node.sdo_bidder.private_utility),
                "messages": sdo_node.message_counter,
-               "last-update": sdo_node.last_update_time - sdo_node.begin_time}
+               "last-update": sdo_node.last_update_time - sdo_node.begin_time,
+               "agreement": sdo_node.agreement_time - sdo_node.begin_time}
 
     results_filename = configuration.RESULTS_FOLDER + "/results_" + SDO_NAME + ".json"
     os.makedirs(os.path.dirname(results_filename), exist_ok=True)

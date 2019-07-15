@@ -1,7 +1,5 @@
 import json
 import logging
-import threading
-
 import pika
 
 from config.logging_configuration import LoggingConfiguration
@@ -61,8 +59,7 @@ class Messaging(object, metaclass=Singleton):
         """
         configuration = Configuration()
         credentials = pika.PlainCredentials(configuration.USERNAME,configuration.PASSWORD)
-        parameters = pika.ConnectionParameters(
-            'localhost', 5672, '/', credentials)
+        parameters = pika.ConnectionParameters('localhost', 5672, '/', credentials)
         return pika.BlockingConnection(parameters)
         #return pika.BlockingConnection(pika.ConnectionParameters(broker_host))
 
@@ -111,8 +108,7 @@ class Messaging(object, metaclass=Singleton):
         # self._channel.queue_declare(queue=dst)
         # self._channel.basic_publish(exchange='', routing_key=dst, body=json.dumps(message.to_dict()))
         self._write_channel.queue_declare(queue=dst)
-        self._write_channel.basic_publish(
-            exchange='', routing_key=dst, body=json.dumps(message.to_dict()))
+        self._write_channel.basic_publish(exchange='', routing_key=dst, body=json.dumps(message.to_dict()))
 
     def send_message_federate(self, dst, message):
         """
@@ -123,9 +119,7 @@ class Messaging(object, metaclass=Singleton):
         #logging.log(LoggingConfiguration.IMPORTANT, threading.get_ident())
         self._write_channel.queue_declare(queue=dst)
         self._write_channel.queue_bind(exchange='sdo_exchange', queue=dst)
-        self._write_channel.basic_publish(exchange='sdo_exchange',
-                                          routing_key=dst,
-                                          body=json.dumps(message.to_dict()))
+        self._write_channel.basic_publish(exchange='sdo_exchange', routing_key=dst, body=json.dumps(message.to_dict()))
 
     def create_bind_queue(self,name,exchange_name):
         self._channel.queue_declare(queue=name)

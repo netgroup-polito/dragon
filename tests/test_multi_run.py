@@ -413,6 +413,7 @@ for iteration in range(iterations):
     sent_messages = dict()
     last_update_times = list()
     winners = list()
+    agreement_times = dict()
     if killed:
         print("skipping...")
         continue
@@ -426,6 +427,7 @@ for iteration in range(iterations):
             if sdo_name in killed:
                 private_utilities.append(0)
                 last_update_times.append(0)
+                agreement_times[sdo_name] = 0
                 placements[sdo_name] = []
                 # message_rates[sdo_name] = OrderedDict([("0:0", 0)])
                 sent_messages[sdo_name] = 0
@@ -436,6 +438,7 @@ for iteration in range(iterations):
                     results = json.loads(f.read())
                     private_utilities.append(results["utility"])
                     last_update_times.append(results["last-update"])
+                    agreement_times[sdo_name] = results["agreement"]
                     placements[sdo_name] = results["placement"]
                     message_rates[sdo_name] = OrderedDict(results["rates"])
                     sent_messages[sdo_name] = results["messages"]
@@ -464,6 +467,8 @@ for iteration in range(iterations):
                                                                                 if u > 0]), 3)/configuration.SDO_NUMBER))
         print("Total messages sent: {}".format(sum(list(sent_messages.values()))))
         print("Last update on {0:.3f}".format(max(last_update_times)))
+        print("Last agreement on {0:.3f}".format(max(agreement_times.values())))
+        print("Agreement is week on: {}".format([sdo for sdo in agreement_times if agreement_times[sdo] == 0]))
         print("Timeout on: {}".format(killed))
 
         convergence_times.append(max(last_update_times + [0]))

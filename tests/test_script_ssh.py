@@ -55,7 +55,7 @@ def remote_sdo_worker(_host_index, _sdo_name, _services, _log_level, _conf_file)
                                                                                                    " ".join(_services),
                                                                                                    _log_level,
                                                                                                    _conf_file),
-                                                     get_pty=True, timeout=50)
+                                                     get_pty=True, timeout=15)
         _exit_status = stdout.channel.recv_exit_status()
 
         lines = _stdout.readlines()
@@ -261,6 +261,7 @@ message_rates = dict()
 private_utilities = list()
 sent_messages = dict()
 last_update_times = list()
+agreement_times = dict()
 for sdo in rap.sdos:
     # sdo_name = "sdo" + str(i)
     sdo_name = sdo
@@ -269,6 +270,7 @@ for sdo in rap.sdos:
     if sdo_name in killed:
         private_utilities.append(0)
         last_update_times.append(0)
+        agreement_times[sdo_name] = 0
         placements[sdo_name] = []
         # message_rates[sdo_name] = OrderedDict([("0:0", 0)])
         sent_messages[sdo_name] = 0
@@ -279,6 +281,7 @@ for sdo in rap.sdos:
             results = json.loads(f.read())
             private_utilities.append(results["utility"])
             last_update_times.append(results["last-update"])
+            agreement_times[sdo_name] = results["agreement"]
             placements[sdo_name] = results["placement"]
             message_rates[sdo_name] = OrderedDict(results["rates"])
             sent_messages[sdo_name] = results["messages"]
@@ -303,7 +306,7 @@ print("Residual resources: \n" + pprint.pformat(residual_resources))
 print("Percentage of assigned resources: " + str(round(used_resources_percentage, 3)))
 print("Percentage of successfully allocated bundles: " + str(round(len([u for u in private_utilities
                                                                         if u > 0]), 3)/configuration.SDO_NUMBER))
-
+'''
 # calculate message rates
 begin_time = min([float(next(iter(message_rates[sdo])).split(":")[0]) for sdo in message_rates])
 next_begin_time = begin_time
@@ -325,11 +328,14 @@ while len(message_rates) > 0:
             del message_rates[sdo]
     global_rates[float("{0:.3f}".format(next_end_time-begin_time))] = in_range_counter/(next_end_time-next_begin_time)
     next_begin_time = next_end_time
+'''
 
 # print message rates
-print("Message rates: \n" + pprint.pformat(global_rates))
+# print("Message rates: \n" + pprint.pformat(global_rates))
 print("Total messages sent: {}".format(sum(list(sent_messages.values()))))
 print("Last update on {0:.3f}".format(max(last_update_times)))
+print("Last agreement on {0:.3f}".format(max(agreement_times.values())))
+print("Agreement is week on: {}".format([sdo for sdo in agreement_times if agreement_times[sdo] <= 0]))
 print("Timeout on: {}".format(killed))
 
 '''
