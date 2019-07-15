@@ -2,7 +2,6 @@ import logging
 import time
 from collections import OrderedDict
 
-from datetime import datetime
 from threading import Lock, Thread, Condition
 
 from config.config import Configuration
@@ -29,7 +28,7 @@ class SDONode:
         self.rap = rap
         self.sdo_bidder = SdoOrchestrator(sdo_name, rap, service_bundle)
         self.sdo_agreement = SdoAgreement(sdo_name, rap, self.sdo_bidder)
-        self.agree_neighbors = set()
+        # self.agree_neighbors = set()
 
         self.neighborhood_detector = NeighborhoodDetector(sdos=self.rap.sdos,
                                                           base_sdo=self.sdo_name,
@@ -104,7 +103,7 @@ class SDONode:
         self.cv.notify()
         self.cv.release()
         thread.join()
-        strong_agreement = len(self.agree_neighbors) == len(self.neighborhood)
+        strong_agreement = len(self.sdo_agreement.agree_neighbors) == len(self.neighborhood)
         logging.log(LoggingConfiguration.IMPORTANT, "Agreement process reached convergence! " +
                                                     "(strong=" + str(strong_agreement) + ")")
         if self.sdo_name in self.sdo_bidder.get_winners():
@@ -176,7 +175,8 @@ class SDONode:
         # '''
         timeout = float(configuration.ASYNC_TIMEOUT)
         while timeout > 0 \
-                and len([q for q in self.message_queues if q not in self.agree_neighbors and len(self.message_queues[q]) == 0]) > 0 \
+                and len([q for q in self.message_queues
+                         if q not in self.sdo_agreement.agree_neighbors and len(self.message_queues[q]) == 0]) > 0 \
                 and self.end_time == 0:
             start_t = time.time()
             self.cv.wait(timeout)
@@ -213,12 +213,17 @@ class SDONode:
         :return:
         """
 
+        # update the overall number of messages
         self.received_messages += len(messages)
+        senders = {m.sender for m in messages}
+
+        # update last-seen timestamps according with new messages received from peers
         for message in messages:
             self.last_seen[message.sender] = message.timestamp
 
         # [ agreement process for these messages ]
-        logging.log(LoggingConfiguration.IMPORTANT, "Handling messages from '" + ",".join([m.sender for m in messages]) + "'")
+        previous_agreement = len(self.sdo_agreement.agree_neighbors) == len(self.neighborhood)
+        logging.log(LoggingConfiguration.IMPORTANT, "Handling messages from '" + ",".join(senders) + "'")
         data = {m.sender: {'bidding-data': m.bidding_data, 'winners': m.winners} for m in messages}
         send_list = self.sdo_agreement.sdo_multi_agreement(data)
 
@@ -233,6 +238,37 @@ class SDONode:
         # [ agreement check ]
         if self.sdo_agreement.updated:
             self.last_update_time = time.time()
+        # check if an agreement present at last iteration has now been broken
+        if previous_agreement:
+            if not self.sdo_agreement.agreement:
+                # old agreement has been broken
+                logging.log(LoggingConfiguration.IMPORTANT, "Previous agreement has been broken.")
+                self.agreement_time = 0
+                # delete timeout if any
+                self._messaging.del_stop_timeout()
+        for message in messages:
+            if message.sender in self.sdo_agreement.agree_neighbors:
+                # NEIGHBOR AGREEMENT - data that neighbor sent is consistent with local
+                logging.log(LoggingConfiguration.IMPORTANT, "Agreement reached with neighbor {}".format(message.sender))
+
+        if len(self.sdo_agreement.agree_neighbors) == len(self.neighborhood):
+            # NEIGHBORHOOD AGREEMENT - data that all neighbor sent are consistent with local
+            if self.agreement_time == 0:
+                # this agreement is new
+                logging.log(LoggingConfiguration.IMPORTANT, "=====================================")
+                logging.log(LoggingConfiguration.IMPORTANT, "AGREEMENT REACHED WITH NEIGHBORHOOD!!")
+                logging.log(LoggingConfiguration.IMPORTANT, "=====================================")
+                self.agreement_time = time.time()
+                # set timeout to stop wait messages if nothing new arrives
+                logging.log(LoggingConfiguration.IMPORTANT, " - Waiting {} seconds for new messages before ending ..."
+                            .format(configuration.AGREEMENT_TIMEOUT))
+                self._messaging.set_stop_timeout(configuration.AGREEMENT_TIMEOUT)
+            else:
+                logging.info("Confirmed existing agreement with neighborhood.")
+
+        '''
+        # check if an agreement present at last iteration has now been broken
+        if previous_agreement:
             if len(self.agree_neighbors) == len(self.neighborhood):
                 # old agreement has been broken
                 logging.log(LoggingConfiguration.IMPORTANT, "Previous agreement has been broken.")
@@ -261,7 +297,9 @@ class SDONode:
                         self._messaging.set_stop_timeout(configuration.AGREEMENT_TIMEOUT)
                     else:
                         logging.info("Confirmed last agreement")
+        '''
 
+    '''
     def bid_message_handler(self, message, last=True):
         """
         This one calls an agreement function that merge data received from a single sender
@@ -321,6 +359,7 @@ class SDONode:
                     self._messaging.set_stop_timeout(configuration.AGREEMENT_TIMEOUT)
                 else:
                     logging.info("Confirmed last agreement")
+    '''
 
     def broadcast(self, neighborhood=None):
         """

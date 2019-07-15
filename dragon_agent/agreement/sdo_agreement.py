@@ -55,7 +55,7 @@ class SdoAgreement:
         #self.per_sdo_agreement = set()
         old_per_sdo_agreement = set(self.agree_neighbors)
         #self.agree_neighbors = {node for node in self.agree_neighbors if node not in received_data}
-        self.agree_neighbors = set()
+        self.agree_neighbors = {sdo for sdo in self.agree_neighbors if sdo not in received_data}
 
         changed_nodes = set()
 
@@ -82,7 +82,10 @@ class SdoAgreement:
 
             # if self._compare_bid_times(current_bidding_data[node], merged_data):
             #     unchanged_nodes.add(node)
-            if not self._equal_bid_values(current_bidding_data[node], merged_data):
+            # if not self._equal_bid_values(current_bidding_data[node], merged_data):
+            # if any(set(current_winners[node]) != set(received_data[s]['winners'][node]) for s in received_data):
+            if not self._equal_bid_values(current_bidding_data[node], merged_data) or \
+                    any(set(current_winners[node]) != set(received_data[s]['winners'][node]) for s in received_data):
                 changed_nodes.add(node)
 
             # compute new winners for this node
@@ -146,13 +149,13 @@ class SdoAgreement:
                     str(sorted(self.sdo_bidder.per_node_winners[node])).encode()).hexdigest()
 
                 current_node_consumption = {r: sum([current_bidding_data[node][s]["consumption"][r]
-                                                    for s in self.rap.sdos])
+                                                    for s in self.rap.sdos if s in current_winners[node]])
                                             for r in self.rap.resources}
                 rcvd_node_consumption = {r: sum([received_data[sender]['bidding-data'][node][s]["consumption"][r]
-                                                 for s in self.rap.sdos])
+                                                 for s in self.rap.sdos if s in received_data[sender]['winners'][node]])
                                          for r in self.rap.resources}
                 new_node_consumption = {r: sum([self.sdo_bidder.bidding_data[node][s]["consumption"][r]
-                                                for s in self.rap.sdos])
+                                                for s in self.rap.sdos if s in self.sdo_bidder.per_node_winners[node]])
                                         for r in self.rap.resources}
 
                 # NOTE: in our decision table "UPDATE" means "keep the merge result"
@@ -257,13 +260,14 @@ class SdoAgreement:
 
             logging.info("Agreement with sdo '" + sender + "':" + str(sender in self.agree_neighbors))
 
-            '''
             # EXPERIMENTAL (is this just sending more messages when not needed? - we use it in drone)
             if sender in self.agree_neighbors and sender not in old_per_sdo_agreement:
                 logging.log(LoggingConfiguration.VERBOSE, "The agreement with this neighbor is new.")
                 # self.rebroadcast = True   # send only to this node?
                 send_list.append(sender)
-            '''
+
+        if not self.agreement:
+            self.agree_neighbors = {sdo for sdo in self.agree_neighbors if sdo in received_data}
 
         logging.log(LoggingConfiguration.IMPORTANT, "---------------- END AGREEMENT ----------------")
         return send_list
