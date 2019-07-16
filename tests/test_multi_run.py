@@ -302,7 +302,7 @@ while iteration < iterations:
 
             # copy configuration, instance and topology
             scp = SCPClient(ssh.get_transport())
-            scp.put([CONF_FILE, configuration.RAP_INSTANCE],
+            scp.put([CONF_FILE, configuration.RAP_INSTANCE, TMP_TOPOLOGY_FILE],
                     remote_dragon_path + "/config/")
             scp.close()
 
