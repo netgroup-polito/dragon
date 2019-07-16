@@ -190,9 +190,9 @@ while iteration < iterations:
     flag = True
     while len(to_deploy + to_update) > 30:
         if flag:
-            to_update.pop()
+            to_update.pop() if to_update else False
         else:
-            to_deploy.pop()
+            to_deploy.pop() if to_deploy else False
         flag = not flag
 
     updated_bundles = dict()

@@ -1,6 +1,6 @@
 ## DRAGON v1.0 README
 
-Updated March 22, 2019
+Updated July 16, 2019
 
 
 #### @Copyright
@@ -152,7 +152,8 @@ Close and save the file, then restart the ssh daemon:
 
     # service sshd restart
 
-Make sure rabbitmq is running on every host thorugh federated setup (see [https://www.rabbitmq.com/federation.html]()).
+Make sure rabbitmq is running on every host thorugh federated setup (see [https://www.rabbitmq.com/federation.html]()). 
+Please make also sure that the 'zip' is installed on each remote host. 
 
 The [tests/test_script_ssh.py]() script can be setup specifying the list of remote hosts, the username to be used for the ssh connections and the remote path where dragon is located. Please modify these values in the first lines of the script according to your setup.
 
