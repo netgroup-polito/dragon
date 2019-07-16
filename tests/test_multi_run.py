@@ -151,6 +151,7 @@ update_probability = {sdo: 0 for sdo in sdos}
 
 convergence_times = list()
 convergence_messages = list()
+concurrency = list()
 
 iteration = 0
 while iteration < iterations:
@@ -481,6 +482,7 @@ while iteration < iterations:
         if not killed:
             convergence_times.append(max(last_update_times + [0]))
             convergence_messages.append(sum(list(sent_messages.values())))
+            concurrency.append(len(rap.sdos))
         else:
             iteration -= 1
 
@@ -547,5 +549,9 @@ for address in remote_hosts:
     print("{} {} {} {}".format(stdin, stdout.readlines(), stderr.readlines(), exit_status))
     ssh.close()
 
+print("concurrency: {}".format(concurrency))
+print("# {} sdos, {} nodes".format(len(sdos), len(nodes)))
+print("# convergence")
 print(" ".join(["{0:.3f}".format(t) for t in convergence_times]))
+print("# messages")
 print(" ".join(["{}".format(m) for m in convergence_messages]))
