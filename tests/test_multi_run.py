@@ -141,7 +141,7 @@ for sdo in sdos:
     print(sdo + " : " + str(service_bundle))
 
 deployed = set()
-overall_placements = {sdo: None for sdo in sdos}
+overall_placements = {sdo: [] for sdo in sdos}
 last_bundles = copy.deepcopy(bundles)
 total_resources = copy.deepcopy(rap.available_resources)
 random.seed(123456)
@@ -172,11 +172,11 @@ while iteration < iterations:
     # [ simulate apps to be deleted ]
     to_delete = [sdo for sdo in deployed if sdo in deployed and random.uniform(0, 100) < delete_probability[sdo]]
     # free resources for deleted apps
-    to_delete_placements = {k: v for k, v in overall_placements.items() if k in to_delete}
-    for service, function, node in list(itertools.chain(*to_delete_placements.values())):
-        rap.available_resources[node] = rap.sum_resources(rap.available_resources[node], rap.consumption[function])
+    # to_delete_placements = {k: v for k, v in overall_placements.items() if k in to_delete}
+    # for service, function, node in list(itertools.chain(*to_delete_placements.values())):
+    #     rap.available_resources[node] = rap.sum_resources(rap.available_resources[node], rap.consumption[function])
     for sdo in to_delete:
-        overall_placements[sdo] = None
+        overall_placements[sdo] = []
         deployed.remove(sdo)
 
     # [ simulate apps to be deployed ]
@@ -228,10 +228,10 @@ while iteration < iterations:
         if sdo in to_delete:
             for service, function, node in overall_placements[sdo][:]:
                 if service in del_bundles[sdo]:
-                    rap.available_resources[node] = rap.sum_resources(rap.available_resources[node], rap.consumption[function])
+                    # rap.available_resources[node] = rap.sum_resources(rap.available_resources[node], rap.consumption[function])
                     overall_placements[sdo].remove((service, function, node))
             del_bundles.pop(sdo)
-            overall_placements[sdo] = None
+            overall_placements[sdo] = []
             deployed.remove(sdo)
 
     # [ Iteration stats ]
@@ -244,6 +244,10 @@ while iteration < iterations:
         print("{}: {} -> {}".format(sdo, last_bundles[sdo], updated_bundles[sdo]))
 
     # update rap instance (resources and sdos)
+    for node in rap.nodes:
+        rap.available_resources[node] = total_resources[node]
+    for service, function, node in list(itertools.chain(*overall_placements.values())):
+        rap.available_resources[node] = rap.sub_resources(rap.available_resources[node], rap.consumption[function])
     rap.sdos = to_deploy + to_update
     with open(configuration.RAP_INSTANCE, mode="w") as rap_file:
         rap_file.write(json.dumps(rap.to_dict(), indent=4))
@@ -305,13 +309,13 @@ while iteration < iterations:
         shutil.rmtree(configuration.RESULTS_FOLDER, ignore_errors=True)
 
         # print total resources
-        total_resources = rap.get_total_resources_amount()
+        merged_resources = rap.get_total_resources_amount()
         average_resource_per_function = {r: sum([rap.get_function_resource_consumption(f)[r] for f in rap.functions])/len(rap.functions) for r in rap.resources}
-        average_resource_percentage_per_function = sum([average_resource_per_function[r]/total_resources[r] for r in rap.resources])/len(rap.resources)
+        average_resource_percentage_per_function = sum([average_resource_per_function[r]/merged_resources[r] for r in rap.resources])/len(rap.resources)
         statistical_bundle_len = len(rap.services)*(configuration.BUNDLE_PERCENTAGE/100)
         average_resource_demand = statistical_bundle_len*average_resource_percentage_per_function
         print("- Resources Statistics - ")
-        print("Total resources: \n" + pprint.pformat(total_resources))
+        print("Total resources: \n" + pprint.pformat(merged_resources))
         # print("Average resources per function: \n" + pprint.pformat(average_resource_per_function))
         # print("Average demand percentage per function: " + str(round(average_resource_percentage_per_function, 3)))
         print("Statistical bundle len: " + str(round(statistical_bundle_len, 2)))
@@ -456,6 +460,16 @@ while iteration < iterations:
             except FileNotFoundError:
                 continue
 
+        # update resources
+        for sdo in placements:
+            overall_placements[sdo] = placements[sdo]
+        for node in rap.nodes:
+            rap.available_resources[node] = total_resources[node]
+        for service, function, node in list(itertools.chain(*overall_placements.values())):
+            rap.available_resources[node] = rap.sub_resources(rap.available_resources[node], rap.consumption[function])
+        with open(configuration.RAP_INSTANCE, mode="w") as rap_file:
+            rap_file.write(json.dumps(rap.to_dict(), indent=4))
+
         # sum of private utilities
         print("Sum of private utilities: " + str(sum(private_utilities)))
 
@@ -463,10 +477,8 @@ while iteration < iterations:
         placement_file = configuration.RESULTS_FOLDER + "/results.json"
         with open(placement_file, "w") as f:
             f.write(json.dumps(placements, indent=4))
-        for service, function, node in list(itertools.chain(*placements.values())):
-            rap.available_resources[node] = rap.sub_resources(rap.available_resources[node], rap.consumption[function])
         total_residual_resources = {r: sum([rap.available_resources[n][r] for n in rap.nodes]) for r in rap.resources}
-        total_residual_resources_percentage = sum([total_residual_resources[r]/total_resources[r] for r in rap.resources])/len(rap.resources)
+        total_residual_resources_percentage = sum([total_residual_resources[r]/merged_resources[r] for r in rap.resources])/len(rap.resources)
         used_resources_percentage = 1 - total_residual_resources_percentage
         print("Allocation: \n" + pprint.pformat(placements))
         print("Residual resources: \n" + pprint.pformat(rap.available_resources))
@@ -479,12 +491,9 @@ while iteration < iterations:
         print("Agreement is week on: {}".format([sdo for sdo in agreement_times if agreement_times[sdo] == 0]))
         print("Timeout on: {}".format(killed))
 
-        if not killed:
-            convergence_times.append(max(last_update_times + [0]))
-            convergence_messages.append(sum(list(sent_messages.values())))
-            concurrency.append(len(rap.sdos))
-        else:
-            iteration -= 1
+        convergence_times.append(max(last_update_times + [0]))
+        convergence_messages.append(sum(list(sent_messages.values())))
+        concurrency.append(len(rap.sdos))
 
     # ------------------------------------------------ SETUP NEXT ---------------------------------------------------- #
 
@@ -496,8 +505,6 @@ while iteration < iterations:
             last_bundles[sdo] = updated_bundles[sdo]
         else:
             print("WARNING: wrong sdo in winners list")
-            continue
-        overall_placements[sdo] = placements[sdo]
 
     # [ update simulation probabilities ]
     unit = 5
