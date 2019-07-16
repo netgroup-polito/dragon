@@ -135,6 +135,8 @@ for sdo in sdos:
                       if int(str(int(hashlib.sha256((sdo+s).encode()).hexdigest(), 16))[-2:]) < configuration.BUNDLE_PERCENTAGE]
     if len(service_bundle) == 0:
         service_bundle.append(rap.services[0])
+    elif len(service_bundle) >= 2*configuration.BUNDLE_PERCENTAGE:
+        service_bundle.pop()
     bundles[sdo] = service_bundle
     print(sdo + " : " + str(service_bundle))
 
