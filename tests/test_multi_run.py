@@ -146,7 +146,7 @@ last_bundles = copy.deepcopy(bundles)
 total_resources = copy.deepcopy(rap.available_resources)
 random.seed(123456)
 delete_probability = {sdo: 0 for sdo in sdos}
-deploy_probability = {sdo: 10 for sdo in sdos}
+deploy_probability = {sdo: 5 for sdo in sdos}
 update_probability = {sdo: 0 for sdo in sdos}
 
 convergence_times = list()
@@ -186,6 +186,15 @@ while iteration < iterations:
     # [ simulate apps to be updated ]
     to_update = [sdo for sdo in deployed if sdo not in to_delete
                  and random.uniform(0, 100) < update_probability[sdo]]
+
+    flag = True
+    while len(to_deploy + to_update) > 30:
+        if flag:
+            to_update.pop()
+        else:
+            to_deploy.pop()
+        flag = not flag
+
     updated_bundles = dict()
     diff_bundles = dict()
     del_bundles = dict()
@@ -414,6 +423,8 @@ while iteration < iterations:
 
         shutil.move(result_tmp_folder+"/"+configuration.RESULTS_FOLDER, os.getcwd())
         shutil.rmtree(result_tmp_folder)
+    else:
+        iteration -= 1
 
     # ------------------------------------------------- FETCH ---------------------------------------------------------#
 
@@ -477,6 +488,7 @@ while iteration < iterations:
         placement_file = configuration.RESULTS_FOLDER + "/results.json"
         with open(placement_file, "w") as f:
             f.write(json.dumps(placements, indent=4))
+        merged_resources = rap.get_total_resources_amount()
         total_residual_resources = {r: sum([rap.available_resources[n][r] for n in rap.nodes]) for r in rap.resources}
         total_residual_resources_percentage = sum([total_residual_resources[r]/merged_resources[r] for r in rap.resources])/len(rap.resources)
         used_resources_percentage = 1 - total_residual_resources_percentage
@@ -515,28 +527,28 @@ while iteration < iterations:
             update_probability[sdo] = 0
         elif sdo in winners:
             if sdo in to_deploy:
-                delete_probability[sdo] = 5
+                delete_probability[sdo] = unit*random.randrange(3)
                 deploy_probability[sdo] = 0
-                update_probability[sdo] = 10
+                update_probability[sdo] = 0
             elif sdo in to_update:
                 deploy_probability[sdo] = 0
-                update_probability[sdo] -= unit
+                update_probability[sdo] = 0
                 delete_probability[sdo] += unit
         elif sdo in deployed:
             delete_probability[sdo] += unit*2
             deploy_probability[sdo] = 0
-            update_probability[sdo] += unit
+            update_probability[sdo] += unit*random.randrange(5)
             if sdo in to_update:
                 delete_probability[sdo] = 50
                 deploy_probability[sdo] = 0
-                update_probability[sdo] += unit * 2
+                # update_probability[sdo] += unit
         elif sdo in to_deploy:
             delete_probability[sdo] = 0
             deploy_probability[sdo] = 0
             update_probability[sdo] = 0
         else:
             delete_probability[sdo] = 0
-            deploy_probability[sdo] += unit * 2
+            deploy_probability[sdo] += unit*random.randrange(2)
             update_probability[sdo] = 0
 
         delete_probability[sdo] = max(delete_probability[sdo], 0)
