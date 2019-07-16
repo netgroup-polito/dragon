@@ -152,7 +152,10 @@ update_probability = {sdo: 0 for sdo in sdos}
 convergence_times = list()
 convergence_messages = list()
 
-for iteration in range(iterations):
+iteration = 0
+while iteration < iterations:
+
+    iteration += 1
 
     print(" - Iteration {} - ".format(iteration))
 
@@ -334,6 +337,7 @@ for iteration in range(iterations):
                 service_bundle = diff_bundles[sdo]
             else:
                 print("WARNING: wrong sdo in rap problem")
+                iteration -= 1
                 continue
 
             print("{} : {}".format(sdo, service_bundle))
@@ -418,6 +422,7 @@ for iteration in range(iterations):
     agreement_times = dict()
     if killed:
         print("skipping...")
+        iteration -= 1
         continue
 
     if len(rap.sdos) > 0:
@@ -473,8 +478,11 @@ for iteration in range(iterations):
         print("Agreement is week on: {}".format([sdo for sdo in agreement_times if agreement_times[sdo] == 0]))
         print("Timeout on: {}".format(killed))
 
-        convergence_times.append(max(last_update_times + [0]))
-        convergence_messages.append(sum(list(sent_messages.values())))
+        if not killed:
+            convergence_times.append(max(last_update_times + [0]))
+            convergence_messages.append(sum(list(sent_messages.values())))
+        else:
+            iteration -= 1
 
     # ------------------------------------------------ SETUP NEXT ---------------------------------------------------- #
 
