@@ -73,7 +73,7 @@ def remote_sdo_worker(_host_index, _sdo_name, _services, _log_level, _conf_file)
 
     try:
         _stdin, _stdout, _stderr = _ssh.exec_command("cd {}".format(remote_dragon_path) + "; "
-                                                     "python3 main.py {} {} -l {} -d {} -o".format(_sdo_name,
+                                                     "python3 main.py {} {} -l {} -d {}".format(_sdo_name,
                                                                                                    " ".join(_services),
                                                                                                    _log_level,
                                                                                                    _conf_file),

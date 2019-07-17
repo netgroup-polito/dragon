@@ -51,7 +51,7 @@ def parse_arguments():
         '--log-file',
         nargs='?',
         default=None,
-        help='The log file name. If not given, log will be redirected on stdout.'
+        help='The log file name. If not given, {sdo_name}.log will be used.'
     )
     parser.add_argument(
         '-d',
