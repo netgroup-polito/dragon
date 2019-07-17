@@ -138,6 +138,11 @@ class SdoAgreement:
             for node in self.rap.nodes:
 
                 logging.info(" - Checking data for node '{}'...".format(node))
+
+                if node not in changed_nodes:
+                    logging.info("LEAVE & NO-REBROADCAST")
+                    continue
+
                 logging.info(" - Loc winners: " + str(sorted(current_winners[node])))
                 logging.info(" - Rec winners: " + str(sorted(received_data[sender]['winners'][node])))
                 logging.info(" - New winners: " + str(sorted(self.sdo_bidder.per_node_winners[node])))

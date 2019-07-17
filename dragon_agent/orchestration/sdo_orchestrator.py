@@ -380,11 +380,15 @@ class SdoOrchestrator:
             logging.info(" ----- Residual resources: {}".format(residual_resources))
             logging.info("Search for lighter bundle ...")
             try:
-                lighter_bid_bundle, impl = self._patience_embedding(residual_resources)
+                # TODO this may take too long
+                # lighter_bid_bundle, impl = self._patience_embedding(residual_resources)
+                # lighter_bid_bundle, impl = self._greedy_embedding(residual_resources, blacklisted_nodes)
+                lighter_bid_bundle = None
             except SchedulingTimeout as ste:
-                logging.info("Scheduling Timeout: " + ste.message)
+                logging.log(LoggingConfiguration.IMPORTANT, "Scheduling Timeout: " + ste.message)
                 lighter_bid_bundle = None
                 impl = list()
+            logging.log(LoggingConfiguration.IMPORTANT, "5")
             logging.info("Lighter bundle: {}".format(lighter_bid_bundle))
             if lighter_bid_bundle is None:
                 logging.info(" ----- There are no solutions fitting the remaining space.")
@@ -396,10 +400,12 @@ class SdoOrchestrator:
                     self.bidding_data[node][self.sdo_name] = assignment[node][self.sdo_name]
                     self.per_node_winners[node].add(self.sdo_name)
                     self.assignment_dict[node][self.sdo_name] = self.bidding_data[node][self.sdo_name]
+                logging.log(LoggingConfiguration.IMPORTANT, "7")
 
                 self.implementations = lighter_implementation
                 self.detailed_implementations = impl
                 self.private_utility = self._private_utility_from_bid_bundle(lighter_bid_bundle)
+
         # set the limits for future rebidding
         if self.sdo_name in self.get_winners():
             for node in self.bidding_data:
@@ -545,6 +551,11 @@ class SdoOrchestrator:
         added_services = list()
         consumption_iterator = {s: 0 for s in self.service_bundle}
         while len(current_bid_bundle) < len(self.service_bundle):
+
+            # check timeout
+            if time.time() > begin_ts + configuration.SCHEDULING_TIME_LIMIT:
+                raise SchedulingTimeout("Scheduling took to long, aborted")
+
             logging.debug(" - Current bundle: {}".format(current_bid_bundle, compact=True))
             logging.debug(" - Skip vector: {}".format(skip_vector, compact=True))
             logging.debug(" - Searching for service to add at index: " + str(len(current_bid_bundle)))
@@ -593,6 +604,11 @@ class SdoOrchestrator:
                                                                           resources=resource_bound)
                                 for s in current_bid_bundle}
         while len(not_improvable_services) < len(current_bid_bundle):
+
+            # check timeout
+            if time.time() > begin_ts + configuration.SCHEDULING_TIME_LIMIT:
+                raise SchedulingTimeout("Scheduling took to long, aborted")
+
             # exclude nodes where bid is completed
             # improvable_services = {s for s in current_bid_bundle if s not in not_improvable_services}
             completed_bid_nodes = self._get_completed_bid_nodes(current_bid_bundle,
@@ -1488,7 +1504,7 @@ class SdoOrchestrator:
     def _build_assignment_from_bid_bundle(self, bid_bundle):
         """
         Builds, votes and returns the assignment of this sdo for each node.
-        :param dict[str, dict[str, union[str, int]]] bid_bundle:
+        :param dict[str, union[str, int]]] bid_bundle:
         :return dict[str, [dict[str, union[str, dict, float]]:
         """
         assignments = dict()
