@@ -41,9 +41,10 @@ class SDONode:
         # init messaging
         self._messaging = Messaging("localhost")
 
-        # message counters
+        # counters
         self.message_counter = 0
         self.received_messages = 0
+        self.iterations = 1
 
         # times
         self.begin_time = 0
@@ -212,6 +213,8 @@ class SDONode:
         :type messages: list of BiddingMessage
         :return:
         """
+
+        self.iterations += 1
 
         # update the overall number of messages
         self.received_messages += len(messages)
